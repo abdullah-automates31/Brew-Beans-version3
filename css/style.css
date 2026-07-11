@@ -2107,3 +2107,221 @@ textarea:focus-visible {
         padding: 2rem 0;
     }
 }
+/* Ensure navbar collapse works properly on mobile */
+@media (max-width: 991.98px) {
+    .navbar-collapse {
+        background: rgba(15, 61, 46, 0.98);
+        margin-top: 10px;
+        padding: 15px;
+        border-radius: 12px;
+        backdrop-filter: blur(20px);
+
+        /* IMPORTANT: keep Bootstrap collapse hidden by default on mobile */
+        height: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+    }
+
+    .navbar-collapse.show {
+        height: auto !important;
+        overflow: visible !important;
+        opacity: 1 !important;
+    }
+    
+    .navbar-collapse.collapsing {
+        height: auto;
+        overflow: hidden;
+        transition: height 0.35s ease;
+    }
+    
+    .navbar-nav {
+        align-items: flex-start !important;
+    }
+    
+    .navbar-nav .nav-item {
+        width: 100%;
+    }
+    
+    .navbar-nav .nav-link {
+        display: block;
+        padding: 12px 0;
+    }
+}
+
+/* ============================================
+   PAYMENT METHOD OPTIONS (Checkout)
+   ============================================ */
+.payment-method-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.payment-method-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.payment-method-option:hover {
+    border-color: var(--secondary-light);
+}
+
+.payment-method-option input[type="radio"] {
+    accent-color: var(--secondary);
+    width: 18px;
+    height: 18px;
+}
+
+.payment-method-option:has(input:checked) {
+    border-color: var(--secondary);
+    background: rgba(46, 139, 87, 0.06);
+}
+
+/* ============================================
+   ORDER TRACKING PAGE
+   ============================================ */
+.tracking-page {
+    min-height: 100vh;
+    padding: 60px 0;
+    background: var(--accent-dark);
+}
+
+.tracking-card {
+    max-width: 640px;
+    margin: 0 auto;
+    background: var(--accent);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    padding: 40px;
+}
+
+.tracking-steps {
+    display: flex;
+    justify-content: space-between;
+    margin: 32px 0;
+    position: relative;
+}
+
+.tracking-steps::before {
+    content: '';
+    position: absolute;
+    top: 18px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--border);
+    z-index: 0;
+}
+
+.tracking-step {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    text-align: center;
+}
+
+.tracking-step-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+}
+
+.tracking-step.active .tracking-step-icon,
+.tracking-step.done .tracking-step-icon {
+    border-color: var(--secondary);
+    background: var(--secondary);
+    color: var(--accent);
+}
+
+.tracking-step-label {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.tracking-step.active .tracking-step-label,
+.tracking-step.done .tracking-step-label {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.tracking-step.cancelled .tracking-step-icon {
+    border-color: #dc3545;
+    background: #dc3545;
+    color: var(--accent);
+}
+
+/* ============================================
+   STAFF ORDERS PAGE
+   ============================================ */
+.staff-page {
+    min-height: 100vh;
+    background: var(--accent-dark);
+    padding: 40px 0;
+}
+
+.staff-login-card {
+    max-width: 400px;
+    margin: 80px auto;
+    background: var(--accent);
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    padding: 40px;
+}
+
+.staff-order-card {
+    background: var(--accent);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.staff-order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.staff-status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.staff-status-badge.placed { background: #e7f1ff; color: #0d6efd; }
+.staff-status-badge.preparing { background: #fff3cd; color: #997404; }
+.staff-status-badge.out_for_delivery { background: #d1e7dd; color: #0a5c36; }
+.staff-status-badge.delivered { background: #d1e7dd; color: var(--primary); }
+.staff-status-badge.cancelled { background: #f8d7da; color: #842029; }
+
+.staff-status-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}

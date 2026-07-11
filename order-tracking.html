@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Your Order | Brew Beans</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <section class="tracking-page">
+        <div class="container">
+            <div class="text-center mb-4">
+                <a href="index.html" class="navbar-brand">
+                    <span class="brand-icon">☕</span>
+                    <span class="brand-text">Brew<span class="brand-accent">Beans</span></span>
+                </a>
+            </div>
+
+            <div class="tracking-card">
+                <h3 class="mb-4 text-center">Track Your Order</h3>
+
+                <form id="trackForm" class="mb-4">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Order ID</label>
+                            <input type="text" class="form-control" id="orderNumberInput" placeholder="BB-001234" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" class="form-control" id="phoneInput" placeholder="+92 300 1234567" required>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary w-100" id="trackBtn">
+                                <i class="bi bi-search me-2"></i>Track Order
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <div id="trackResult" style="display:none;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted" id="lastUpdated"></small>
+                        <button class="btn btn-sm btn-outline-secondary" id="notifyBtn" title="Get notified when status changes"><i class="bi bi-bell me-1"></i>Notify me</button>
+                    </div>
+
+                    <div class="tracking-steps" id="trackingSteps"></div>
+
+                    <div class="text-center mb-2">
+                        <span class="badge bg-secondary" id="paymentBadge"></span>
+                    </div>
+                    <p class="text-center text-muted small mb-3" id="etaText"></p>
+
+                    <div class="border-top pt-3">
+                        <h6 class="mb-3">Order Summary</h6>
+                        <div id="trackItems"></div>
+                        <div class="d-flex justify-content-between mt-3 pt-3 border-top">
+                            <span>Subtotal</span><span id="trackSubtotal"></span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Delivery</span><span id="trackDelivery"></span>
+                        </div>
+                        <div class="d-flex justify-content-between fw-bold fs-5 mt-2">
+                            <span>Total</span><span id="trackTotal"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="trackError" class="alert alert-warning mt-3" style="display:none;"></div>
+            </div>
+        </div>
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/order-tracking.js"></script>
+</body>
+</html>

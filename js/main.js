@@ -4,7 +4,7 @@
    Version: 1.0.0
    ============================================ */
 
-$(document).ready(function() {
+$(document).ready(function () {
 
     // ==========================================
     // MENU DATA
@@ -56,7 +56,7 @@ $(document).ready(function() {
             category: "cold-coffee",
             description: "Chilled espresso with cold milk poured over ice for a refreshing pick-me-up.",
             price: 450,
-            image: "https://images.unsplash.com/photo-1517701604599-bb29b5dd7359?w=400&h=300&fit=crop"
+            image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSoukS6flmACeI7s87ROZuOkQ77Iu0BCXhVN-35AinGYA&s=10"
         },
         {
             id: 7,
@@ -157,16 +157,37 @@ $(document).ready(function() {
             }));
     }
 
+    // Corrupted localStorage (bad JSON from a browser extension, a previous
+    // bug, or manual tampering) must never throw here — a top-level throw
+    // would abort the rest of this script and break every feature on the page.
+    function safeReadLocalStorage(key) {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) {
+            localStorage.removeItem(key);
+            return null;
+        }
+    }
+
+    // Private-browsing modes and full storage quotas throw on setItem —
+    // never let that abort whatever the caller was doing next (e.g. rendering).
+    function safeWriteLocalStorage(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) { /* storage unavailable; app continues without persistence */ }
+    }
+
     // ==========================================
     // STATE MANAGEMENT
     // ==========================================
-    let cart = sanitizeCartData(JSON.parse(localStorage.getItem('brewBeansCart')) || []);
-    let userLocation = JSON.parse(localStorage.getItem('brewBeansLocation')) || null;
+    let cart = sanitizeCartData(safeReadLocalStorage('brewBeansCart') || []);
+    let userLocation = safeReadLocalStorage('brewBeansLocation') || null;
 
     // ==========================================
     // LOADING SCREEN
     // ==========================================
-    setTimeout(function() {
+    setTimeout(function () {
         $('#loading-screen').addClass('hidden');
     }, 2500);
 
@@ -176,26 +197,26 @@ $(document).ready(function() {
     const locationModal = new bootstrap.Modal(document.getElementById('locationModal'));
 
     // Show location modal after loading
-    setTimeout(function() {
+    setTimeout(function () {
         if (!userLocation) {
             locationModal.show();
         }
     }, 3000);
 
-    $('#allowLocation').on('click', function() {
+    $('#allowLocation').on('click', function () {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                function(position) {
+                function (position) {
                     userLocation = {
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
                         timestamp: new Date().toISOString()
                     };
-                    localStorage.setItem('brewBeansLocation', JSON.stringify(userLocation));
+                    safeWriteLocalStorage('brewBeansLocation', userLocation);
                     locationModal.hide();
                     showToast('Location saved successfully!');
                 },
-                function(error) {
+                function (error) {
                     console.error('Location error:', error);
                     showToast('Could not access location. Please enter manually.', 'warning');
                     locationModal.hide();
@@ -208,14 +229,14 @@ $(document).ready(function() {
         }
     });
 
-    $('#denyLocation').on('click', function() {
+    $('#denyLocation').on('click', function () {
         showToast('You can enable location later from checkout.', 'info');
     });
 
     // ==========================================
     // NAVBAR SCROLL EFFECT
     // ==========================================
-    $(window).on('scroll', function() {
+    $(window).on('scroll', function () {
         if ($(window).scrollTop() > 50) {
             $('#mainNav').addClass('scrolled');
         } else {
@@ -223,8 +244,23 @@ $(document).ready(function() {
         }
     });
 
-    // Smooth scrolling for nav links
-    $('a[href^="#"]').on('click', function(e) {
+    // // Smooth scrolling for nav links
+    // $('a[href^="#"]').on('click', function(e) {
+    //     e.preventDefault();
+    //     const target = $(this.getAttribute('href'));
+    //     if (target.length) {
+    //         $('html, body').animate({
+    //             scrollTop: target.offset().top - 70
+    //         }, 800, 'swing');
+    //     }
+    //     // Close mobile menu
+    //     $('.navbar-collapse').collapse('hide');
+    // });
+    // Smooth scrolling for nav links - FIXED VERSION
+    $('a[href^="#"]').on('click', function (e) {
+        // Only handle if it's a nav-link (not dropdown toggles or other anchors)
+        if (!$(this).hasClass('nav-link')) return;
+
         e.preventDefault();
         const target = $(this.getAttribute('href'));
         if (target.length) {
@@ -232,15 +268,43 @@ $(document).ready(function() {
                 scrollTop: target.offset().top - 70
             }, 800, 'swing');
         }
-        // Close mobile menu
-        $('.navbar-collapse').collapse('hide');
+
+        // Close mobile menu using Bootstrap's API properly
+        const navbarCollapse = document.querySelector('.navbar-collapse');
+        if (navbarCollapse && navbarCollapse.classList.contains('show')) {
+            const bsCollapse = bootstrap.Collapse.getInstance(navbarCollapse);
+            if (bsCollapse) {
+                bsCollapse.hide();
+            } else {
+                $(navbarCollapse).collapse('hide');
+            }
+        }
     });
 
+    // // Active nav link on scroll
+    // $(window).on('scroll', function () {
+    //     const scrollPos = $(window).scrollTop() + 100;
+    //     $('.nav-link').each(function () {
+    //         const section = $($(this).attr('href'));
+    //         if (section.length) {
+    //             const sectionTop = section.offset().top;
+    //             const sectionBottom = sectionTop + section.outerHeight();
+    //             if (scrollPos >= sectionTop && scrollPos < sectionBottom) {
+    //                 $('.nav-link').removeClass('active');
+    //                 $(this).addClass('active');
+    //             }
+    //         }
+    //     });
+    // });
+
     // Active nav link on scroll
-    $(window).on('scroll', function() {
+    $(window).on('scroll', function () {
         const scrollPos = $(window).scrollTop() + 100;
-        $('.nav-link').each(function() {
-            const section = $($(this).attr('href'));
+        $('.nav-link').each(function () {
+            const href = $(this).attr('href');
+            if (!href || !href.startsWith('#')) return;
+
+            const section = $(href);
             if (section.length) {
                 const sectionTop = section.offset().top;
                 const sectionBottom = sectionTop + section.outerHeight();
@@ -260,7 +324,7 @@ $(document).ready(function() {
         easing: 'ease-out-cubic',
         once: true,
         offset: 100,
-        disable: function() {
+        disable: function () {
             return window.innerWidth < 768;
         }
     });
@@ -272,14 +336,13 @@ $(document).ready(function() {
         const $grid = $('#menuGrid');
         $grid.empty();
 
-        const filteredItems = filter === 'all' 
-            ? menuItems 
+        const filteredItems = filter === 'all'
+            ? menuItems
             : menuItems.filter(item => item.category === filter);
 
-        filteredItems.forEach((item, index) => {
-            const delay = (index % 4) * 100;
+        filteredItems.forEach((item) => {
             const html = `
-                <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="${delay}">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="menu-item" data-id="${item.id}">
                         <div class="menu-item-img">
                             <img src="${item.image}" alt="${item.name}" loading="lazy">
@@ -301,8 +364,9 @@ $(document).ready(function() {
             $grid.append(html);
         });
 
-        // Re-initialize AOS for new elements
-        AOS.refresh();
+        if (window.innerWidth >= 768) {
+            AOS.refresh();
+        }
     }
 
     // Initial render
@@ -311,7 +375,7 @@ $(document).ready(function() {
     // ==========================================
     // MENU FILTERS
     // ==========================================
-    $('.filter-btn').on('click', function() {
+    $('.filter-btn').on('click', function () {
         $('.filter-btn').removeClass('active');
         $(this).addClass('active');
         const filter = $(this).data('filter');
@@ -319,7 +383,7 @@ $(document).ready(function() {
     });
 
     // Category card click
-    $('.category-card').on('click', function() {
+    $('.category-card').on('click', function () {
         const category = $(this).data('category');
         $('.filter-btn').removeClass('active');
         $(`.filter-btn[data-filter="${category}"]`).addClass('active');
@@ -334,7 +398,7 @@ $(document).ready(function() {
     // ==========================================
     function updateCart() {
         cart = cart.filter(item => item && Number.isFinite(item.quantity) && item.quantity > 0);
-        localStorage.setItem('brewBeansCart', JSON.stringify(cart));
+        safeWriteLocalStorage('brewBeansCart', cart);
         renderCart();
         updateCartBadge();
     }
@@ -400,7 +464,7 @@ $(document).ready(function() {
     }
 
     // Add to cart
-    $(document).on('click', '.btn-add-cart', function() {
+    $(document).on('click', '.btn-add-cart', function () {
         const id = parseInt($(this).data('id'));
         const menuItem = menuItems.find(item => item.id === id);
 
@@ -434,7 +498,7 @@ $(document).ready(function() {
     });
 
     // Cart quantity controls
-    $(document).on('click', '.qty-minus', function() {
+    $(document).on('click', '.qty-minus', function () {
         const $item = $(this).closest('.cart-item');
         const id = parseInt($item.data('id'));
         const cartItem = cart.find(item => item.id === id);
@@ -445,7 +509,7 @@ $(document).ready(function() {
         }
     });
 
-    $(document).on('click', '.qty-plus', function() {
+    $(document).on('click', '.qty-plus', function () {
         const $item = $(this).closest('.cart-item');
         const id = parseInt($item.data('id'));
         const cartItem = cart.find(item => item.id === id);
@@ -456,7 +520,7 @@ $(document).ready(function() {
         }
     });
 
-    $(document).on('click', '.cart-item-remove', function() {
+    $(document).on('click', '.cart-item-remove', function () {
         const $item = $(this).closest('.cart-item');
         const id = parseInt($item.data('id'));
         cart = cart.filter(item => item.id !== id);
@@ -465,13 +529,13 @@ $(document).ready(function() {
     });
 
     // Cart sidebar toggle
-    $('#cartToggle').on('click', function() {
+    $('#cartToggle').on('click', function () {
         $('#cartSidebar').addClass('open');
         $('#cartOverlay').addClass('show');
         $('body').css('overflow', 'hidden');
     });
 
-    $('#closeCart, #cartOverlay').on('click', function() {
+    $('#closeCart, #cartOverlay').on('click', function () {
         $('#cartSidebar').removeClass('open');
         $('#cartOverlay').removeClass('show');
         $('body').css('overflow', '');
@@ -482,8 +546,9 @@ $(document).ready(function() {
     // ==========================================
     const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
     const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+    let checkoutLatLng = null;
 
-    $('#checkoutBtn').on('click', function() {
+    $('#checkoutBtn').on('click', function () {
         if (cart.length === 0) {
             showToast('Your cart is empty!', 'warning');
             return;
@@ -499,6 +564,7 @@ $(document).ready(function() {
         if (userLocation) {
             $('#currentLocation').val(`${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)}`);
             calculateDeliveryEstimate(userLocation.lat, userLocation.lng);
+            checkoutLatLng = { lat: userLocation.lat, lng: userLocation.lng };
         }
 
         checkoutModal.show();
@@ -533,18 +599,19 @@ $(document).ready(function() {
     }
 
     // Detect location button
-    $('#detectLocation').on('click', function() {
+    $('#detectLocation').on('click', function () {
         if (navigator.geolocation) {
             $(this).html('<i class="bi bi-arrow-repeat spin"></i>');
             navigator.geolocation.getCurrentPosition(
-                function(position) {
+                function (position) {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     $('#currentLocation').val(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
                     calculateDeliveryEstimate(lat, lng);
+                    checkoutLatLng = { lat, lng };
                     $('#detectLocation').html('<i class="bi bi-geo-alt"></i>');
                 },
-                function() {
+                function () {
                     showToast('Could not detect location', 'warning');
                     $('#detectLocation').html('<i class="bi bi-geo-alt"></i>');
                 }
@@ -575,56 +642,136 @@ $(document).ready(function() {
         const R = 6371; // Earth's radius in km
         const dLat = (lat2 - lat1) * Math.PI / 180;
         const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                  Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c;
     }
 
     // Place order
-    $('#placeOrderBtn').on('click', function() {
+    $('#placeOrderBtn').on('click', async function () {
         const fullName = $('#fullName').val().trim();
         const phone = $('#phoneNumber').val().trim();
+        const email = $('#email').val().trim();
         const address = $('#address').val().trim();
+        const notes = $('#orderNotes').val().trim();
+        const paymentMethod = $('input[name="paymentMethod"]:checked').val();
 
         if (!fullName || !phone || !address) {
             showToast('Please fill in all required fields', 'warning');
             return;
         }
 
-        // Simulate order processing
-        $(this).html('<i class="bi bi-arrow-repeat spin me-2"></i>Processing...');
-        $(this).prop('disabled', true);
+        if (cart.length === 0) {
+            showToast('Your cart is empty!', 'warning');
+            return;
+        }
 
-        setTimeout(function() {
-            checkoutModal.hide();
+        const $btn = $(this);
+        $btn.html('<i class="bi bi-arrow-repeat spin me-2"></i>Processing...');
+        $btn.prop('disabled', true);
 
-            // Generate order details
-            const orderId = 'BB-' + Date.now().toString().slice(-6);
-            const total = $('#checkoutTotal').text();
+        try {
+            const items = cart.map(item => ({ menu_item_id: item.id, quantity: item.quantity }));
 
-            $('#orderDetails').html(`
-                <p class="mb-1"><strong>Order ID:</strong> ${orderId}</p>
-                <p class="mb-0"><strong>Total:</strong> ${total}</p>
-            `);
+            const { data, error } = await supabaseClient.rpc('create_order', {
+                p_customer_name: fullName,
+                p_phone: phone,
+                p_email: email || null,
+                p_address: address,
+                p_lat: checkoutLatLng ? checkoutLatLng.lat : null,
+                p_lng: checkoutLatLng ? checkoutLatLng.lng : null,
+                p_notes: notes || null,
+                p_payment_method: paymentMethod,
+                p_items: items
+            });
 
-            successModal.show();
+            if (error) throw error;
 
-            // Clear cart
+            const order = Array.isArray(data) ? data[0] : data;
+            const orderNumber = order.order_number;
+            const total = order.total;
+
+            if (paymentMethod === 'cod') {
+                completeOrderSuccess(orderNumber, total, phone, order.delivery_charge);
+                return;
+            }
+
+            // Online wallet payment: ask the edge function to build the gateway redirect
+            const callbackUrl = `${SUPABASE_URL}/functions/v1/payment-callback?order=${encodeURIComponent(orderNumber)}&phone=${encodeURIComponent(phone)}`;
+            const { data: payData, error: payError } = await supabaseClient.functions.invoke('create-payment', {
+                body: {
+                    order_number: orderNumber,
+                    payment_method: paymentMethod,
+                    amount: total,
+                    return_url: callbackUrl
+                }
+            });
+
+            if (payError) throw payError;
+
+            if (!payData.configured) {
+                showToast(`${paymentMethod === 'jazzcash' ? 'JazzCash' : 'EasyPaisa'} isn't set up yet — your order was placed for cash on delivery instead.`, 'warning');
+                completeOrderSuccess(orderNumber, total, phone, order.delivery_charge);
+                return;
+            }
+
+            // Redirect the browser to the payment gateway via an auto-submitted form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = payData.gatewayUrl;
+            Object.entries(payData.fields).forEach(([key, value]) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            });
+            document.body.appendChild(form);
+
             cart = [];
             updateCart();
-
-            // Reset form
-            $('#checkoutForm')[0].reset();
-            $('#deliveryEstimate').hide();
-            $('#placeOrderBtn').html('<i class="bi bi-check-circle me-2"></i>Place Order');
-            $('#placeOrderBtn').prop('disabled', false);
-        }, 2000);
+            form.submit();
+        } catch (err) {
+            console.error('Order error:', err);
+            showToast(err.message || 'Could not place order. Please try again.', 'warning');
+            $btn.html('<i class="bi bi-check-circle me-2"></i>Place Order');
+            $btn.prop('disabled', false);
+        }
     });
 
+    function completeOrderSuccess(orderNumber, total, phone, deliveryCharge) {
+        checkoutModal.hide();
+
+        const prepMin = 15;
+        const legMin = deliveryCharge > 0 ? 25 : 8;
+        const eta = new Date(Date.now() + (prepMin + legMin) * 60000);
+        const etaLabel = eta.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        $('#orderDetails').html(`
+            <p class="mb-1"><strong>Order ID:</strong> ${orderNumber}</p>
+            <p class="mb-1"><strong>Total:</strong> Rs. ${total}</p>
+            <p class="mb-3"><strong>Estimated ready by:</strong> ${etaLabel}</p>
+            <a href="order-tracking.html?order=${encodeURIComponent(orderNumber)}&phone=${encodeURIComponent(phone)}" class="btn btn-outline-primary">
+                <i class="bi bi-truck me-2"></i>Track Your Order
+            </a>
+        `);
+
+        successModal.show();
+
+        cart = [];
+        updateCart();
+
+        $('#checkoutForm')[0].reset();
+        $('#deliveryEstimate').hide();
+        checkoutLatLng = null;
+        $('#placeOrderBtn').html('<i class="bi bi-check-circle me-2"></i>Place Order');
+        $('#placeOrderBtn').prop('disabled', false);
+    }
+
     // Reset checkout modal on hide
-    $('#checkoutModal').on('hidden.bs.modal', function() {
+    $('#checkoutModal').on('hidden.bs.modal', function () {
         $('#checkoutForm')[0].reset();
         $('#deliveryEstimate').hide();
         $('#placeOrderBtn').html('<i class="bi bi-check-circle me-2"></i>Place Order');
@@ -634,14 +781,14 @@ $(document).ready(function() {
     // ==========================================
     // GALLERY LIGHTBOX
     // ==========================================
-    $('.gallery-item').on('click', function() {
+    $('.gallery-item').on('click', function () {
         const imgSrc = $(this).find('img').attr('src');
         $('#lightboxImg').attr('src', imgSrc);
         $('#lightbox').addClass('show');
         $('body').css('overflow', 'hidden');
     });
 
-    $('#lightboxClose, #lightbox').on('click', function(e) {
+    $('#lightboxClose, #lightbox').on('click', function (e) {
         if (e.target === this || $(e.target).closest('#lightboxClose').length) {
             $('#lightbox').removeClass('show');
             $('body').css('overflow', '');
@@ -651,7 +798,7 @@ $(document).ready(function() {
     // ==========================================
     // BACK TO TOP
     // ==========================================
-    $(window).on('scroll', function() {
+    $(window).on('scroll', function () {
         if ($(window).scrollTop() > 500) {
             $('#backToTop').addClass('show');
         } else {
@@ -659,14 +806,14 @@ $(document).ready(function() {
         }
     });
 
-    $('#backToTop').on('click', function() {
+    $('#backToTop').on('click', function () {
         $('html, body').animate({ scrollTop: 0 }, 800);
     });
 
     // ==========================================
     // NEWSLETTER FORM
     // ==========================================
-    $('#newsletterForm').on('submit', function(e) {
+    $('#newsletterForm').on('submit', function (e) {
         e.preventDefault();
         const email = $(this).find('input[type="email"]').val();
         if (email) {
@@ -699,7 +846,7 @@ $(document).ready(function() {
         $('body').append(container);
 
         setTimeout(() => {
-            toast.fadeOut(400, function() {
+            toast.fadeOut(400, function () {
                 $(this).closest('.toast-container').remove();
             });
         }, 3000);
@@ -725,7 +872,7 @@ $(document).ready(function() {
     // ==========================================
     // PARALLAX EFFECT (subtle)
     // ==========================================
-    $(window).on('scroll', function() {
+    $(window).on('scroll', function () {
         const scrolled = $(window).scrollTop();
         $('.hero-bg').css('transform', `translateY(${scrolled * 0.3}px)`);
     });
@@ -751,7 +898,7 @@ $(document).ready(function() {
 
     // Trigger counter animation when stats are visible
     let countersAnimated = false;
-    $(window).on('scroll', function() {
+    $(window).on('scroll', function () {
         if (countersAnimated) return;
 
         const $stats = $('.hero-stats');
@@ -765,7 +912,7 @@ $(document).ready(function() {
     // ==========================================
     // KEYBOARD NAVIGATION
     // ==========================================
-    $(document).on('keydown', function(e) {
+    $(document).on('keydown', function (e) {
         if (e.key === 'Escape') {
             $('#cartSidebar').removeClass('open');
             $('#cartOverlay').removeClass('show');
@@ -780,11 +927,11 @@ $(document).ready(function() {
     let touchStartX = 0;
     let touchEndX = 0;
 
-    document.addEventListener('touchstart', function(e) {
+    document.addEventListener('touchstart', function (e) {
         touchStartX = e.changedTouches[0].screenX;
     }, false);
 
-    document.addEventListener('touchend', function(e) {
+    document.addEventListener('touchend', function (e) {
         touchEndX = e.changedTouches[0].screenX;
         handleSwipe();
     }, false);
@@ -820,7 +967,7 @@ $(document).ready(function() {
             });
         });
 
-        $('img[loading="lazy"]').each(function() {
+        $('img[loading="lazy"]').each(function () {
             imageObserver.observe(this);
         });
     }
