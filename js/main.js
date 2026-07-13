@@ -366,7 +366,15 @@ $(document).ready(function () {
             $grid.append(html);
         });
 
-        if (typeof AOS !== 'undefined' && window.innerWidth >= 768) {
+        // AOS's mobile "disable" check only runs once, at AOS.init() time, on
+        // elements that already exist in the DOM. Menu items are injected here,
+        // after that point, so AOS never processes them on mobile — they'd be
+        // stuck permanently at opacity:0 with their data-aos attribute doing
+        // nothing but hiding them forever. Strip it manually on mobile so menu
+        // items are always visible; only let AOS animate them on larger screens.
+        if (window.innerWidth < 768) {
+            $grid.find('[data-aos]').removeAttr('data-aos').removeAttr('data-aos-delay');
+        } else if (typeof AOS !== 'undefined') {
             AOS.refreshHard();
         }
     }
