@@ -1391,11 +1391,36 @@
     <!-- STAFF PAGE -->
     <div class="page" id="page-staff">
       <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem">
           <h3>Staff PINs</h3>
+          <button class="btn-add" onclick="openStaffModal()"><i class="bi bi-plus-lg"></i> Add Staff</button>
         </div>
-        <div class="card-body">
-          <p style="color:var(--text-light);font-size:0.9rem;">Staff PIN management coming soon.</p>
+        <div class="card-body" style="padding:0">
+          <div id="staffList"><div class="loading-spinner"><div class="spinner-ring"></div><p>Loading...</p></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add/Edit Staff Modal -->
+    <div class="modal-overlay" id="staffModal" onclick="closeStaffModal(event)">
+      <div class="modal" style="max-width:420px">
+        <div class="modal-header">
+          <h3 id="staffModalTitle">Add Staff</h3>
+          <button class="modal-close" onclick="closeStaffModalDirect()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Name</label>
+            <input type="text" id="staffName" class="form-input" placeholder="e.g. Ahmed" maxlength="50">
+          </div>
+          <div class="form-group" style="margin-top:1rem">
+            <label class="form-label">PIN <span style="color:var(--text-light);font-weight:400;font-size:0.8rem">(4–6 digits)</span></label>
+            <input type="text" id="staffPin" class="form-input" placeholder="e.g. 1234" maxlength="6" inputmode="numeric" pattern="[0-9]*">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal close" onclick="closeStaffModalDirect()">Cancel</button>
+          <button class="btn-modal next" id="staffSaveBtn" onclick="saveStaff()">Save</button>
         </div>
       </div>
     </div>
@@ -1929,6 +1954,7 @@
     if (page === 'menu') loadMenu();
     if (page === 'hours') loadHours();
     if (page === 'addons') loadAddonGroups();
+    if (page === 'staff') loadStaff();
   }
 
   // ── LOGOUT ──
@@ -2222,6 +2248,101 @@
     if (hasError) { showToast('Failed to save some hours', 'error'); return; }
     showToast('Business hours saved!', 'success');
     checkShopStatus();
+  }
+
+  // ── STAFF PINs ──
+  let editingStaffId = null;
+
+  async function loadStaff() {
+    const el = document.getElementById('staffList');
+    el.innerHTML = '<div class="loading-spinner"><div class="spinner-ring"></div><p>Loading...</p></div>';
+    const { data, error } = await supabaseClient.from('staff_pins').select('*').order('created_at');
+    if (error) { el.innerHTML = '<div style="padding:1.5rem;color:var(--text-light)">Failed to load staff.</div>'; return; }
+    if (!data || !data.length) {
+      el.innerHTML = '<div class="empty-state"><i class="bi bi-people"></i><p>No staff members yet</p></div>';
+      return;
+    }
+    el.innerHTML = `
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border-light);text-align:left">
+            <th style="padding:0.75rem 1.25rem;font-size:0.8rem;color:var(--text-light);font-weight:600">NAME</th>
+            <th style="padding:0.75rem 1.25rem;font-size:0.8rem;color:var(--text-light);font-weight:600">PIN</th>
+            <th style="padding:0.75rem 1.25rem;font-size:0.8rem;color:var(--text-light);font-weight:600">ADDED</th>
+            <th style="padding:0.75rem 1.25rem"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${data.map(s => `
+            <tr style="border-bottom:1px solid var(--border-light)">
+              <td style="padding:0.85rem 1.25rem;font-weight:500">${escHtml(s.name)}</td>
+              <td style="padding:0.85rem 1.25rem">
+                <span class="pin-display" data-id="${s.id}" data-pin="${escHtml(s.pin)}" style="font-family:monospace;cursor:pointer" title="Click to reveal">••••</span>
+              </td>
+              <td style="padding:0.85rem 1.25rem;color:var(--text-light);font-size:0.85rem">${new Date(s.created_at).toLocaleDateString()}</td>
+              <td style="padding:0.85rem 1.25rem;text-align:right;white-space:nowrap">
+                <button class="btn-icon" onclick="openStaffModal('${s.id}','${escHtml(s.name)}','${escHtml(s.pin)}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="btn-icon danger" onclick="deleteStaff('${s.id}','${escHtml(s.name)}')" title="Delete"><i class="bi bi-trash"></i></button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+    // PIN reveal on click
+    document.querySelectorAll('.pin-display').forEach(el => {
+      el.addEventListener('click', function() {
+        this.textContent = this.textContent === '••••' ? this.dataset.pin : '••••';
+      });
+    });
+  }
+
+  function openStaffModal(id = null, name = '', pin = '') {
+    editingStaffId = id;
+    document.getElementById('staffModalTitle').textContent = id ? 'Edit Staff' : 'Add Staff';
+    document.getElementById('staffName').value = name;
+    document.getElementById('staffPin').value = pin;
+    document.getElementById('staffSaveBtn').textContent = id ? 'Update' : 'Save';
+    document.getElementById('staffModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('staffName').focus(), 100);
+  }
+
+  function closeStaffModal(e) { if (e.target === document.getElementById('staffModal')) closeStaffModalDirect(); }
+  function closeStaffModalDirect() {
+    document.getElementById('staffModal').classList.remove('show');
+    document.body.style.overflow = '';
+    editingStaffId = null;
+  }
+
+  async function saveStaff() {
+    const name = document.getElementById('staffName').value.trim();
+    const pin  = document.getElementById('staffPin').value.trim();
+    if (!name) { showToast('Name is required', 'error'); return; }
+    if (!/^\d{4,6}$/.test(pin)) { showToast('PIN must be 4–6 digits', 'error'); return; }
+
+    const btn = document.getElementById('staffSaveBtn');
+    btn.textContent = 'Saving...'; btn.disabled = true;
+
+    let error;
+    if (editingStaffId) {
+      ({ error } = await supabaseClient.from('staff_pins').update({ name, pin }).eq('id', editingStaffId));
+    } else {
+      ({ error } = await supabaseClient.from('staff_pins').insert({ name, pin }));
+    }
+
+    btn.textContent = editingStaffId ? 'Update' : 'Save'; btn.disabled = false;
+    if (error) { showToast(error.message || 'Failed to save', 'error'); return; }
+    closeStaffModalDirect();
+    showToast(editingStaffId ? 'Staff updated!' : 'Staff added!', 'success');
+    await loadStaff();
+  }
+
+  async function deleteStaff(id, name) {
+    if (!confirm(`Delete "${name}"? They will lose staff access immediately.`)) return;
+    const { error } = await supabaseClient.from('staff_pins').delete().eq('id', id);
+    if (error) { showToast('Failed to delete', 'error'); return; }
+    showToast(`"${name}" removed`, 'success');
+    await loadStaff();
   }
 
   // ── MENU MANAGEMENT ──
