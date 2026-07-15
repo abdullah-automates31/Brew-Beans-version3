@@ -1153,6 +1153,70 @@
 
     .btn-save-hours:hover { background: var(--primary); }
     .btn-save-hours:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ── ADDON MANAGEMENT ── */
+    .addon-group-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .addon-group-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+
+    .addon-group-header:hover { background: var(--bg); }
+
+    .addon-group-name { font-weight: 700; font-size: 0.95rem; color: var(--text-dark); flex: 1; }
+
+    .req-badge {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; padding: 0.2rem 0.5rem; border-radius: 6px;
+    }
+
+    .req-badge.required { background: #FEF3C7; color: #D97706; }
+    .req-badge.optional { background: #F3F4F6; color: #6B7280; }
+
+    .group-chevron { color: var(--text-light); transition: transform 0.2s ease; }
+    .addon-group-card.expanded .group-chevron { transform: rotate(180deg); }
+
+    .addon-group-body { display: none; border-top: 1px solid var(--border); }
+    .addon-group-card.expanded .addon-group-body { display: block; }
+
+    .addon-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.6rem 1.25rem; border-bottom: 1px solid var(--border);
+    }
+
+    .addon-row:last-child { border-bottom: none; }
+    .addon-row-name { flex: 1; font-size: 0.875rem; font-weight: 500; color: var(--text-dark); }
+    .addon-row-price { font-size: 0.875rem; color: var(--text-medium); min-width: 80px; }
+
+    .btn-add-addon {
+      width: calc(100% - 2.5rem); margin: 0.6rem 1.25rem;
+      background: none; border: 1.5px dashed var(--border); border-radius: 8px;
+      padding: 0.45rem; font-family: var(--font-primary); font-size: 0.8rem;
+      color: var(--text-light); cursor: pointer; transition: var(--transition);
+      display: flex; align-items: center; justify-content: center; gap: 0.4rem;
+    }
+
+    .btn-add-addon:hover { border-color: var(--secondary); color: var(--secondary); }
+
+    .assign-group-row {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.7rem 0; border-bottom: 1px solid var(--border);
+    }
+
+    .assign-group-row:last-child { border-bottom: none; }
+    .assign-group-row label { flex: 1; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -1181,6 +1245,9 @@
     </button>
     <button class="nav-item" onclick="showPage('hours')">
       <i class="bi bi-clock"></i> Business Hours
+    </button>
+    <button class="nav-item" onclick="showPage('addons')">
+      <i class="bi bi-tags"></i> Add-ons
     </button>
     <button class="nav-item" onclick="showPage('staff')">
       <i class="bi bi-people"></i> Staff PINs
@@ -1309,6 +1376,18 @@
       </div>
     </div>
 
+    <!-- ADDONS PAGE -->
+    <div class="page" id="page-addons">
+      <div class="menu-page-header">
+        <button class="btn-primary" onclick="openGroupModal()">
+          <i class="bi bi-plus-lg"></i> Add Group
+        </button>
+      </div>
+      <div id="addonGroupsList">
+        <div class="loading-spinner"><div class="spinner-ring"></div><p>Loading add-ons...</p></div>
+      </div>
+    </div>
+
     <!-- STAFF PAGE -->
     <div class="page" id="page-staff">
       <div class="card">
@@ -1346,6 +1425,77 @@
     </div>
     <div class="modal-body" id="modalBody"></div>
     <div class="modal-actions" id="modalActions"></div>
+  </div>
+</div>
+
+<!-- ADDON GROUP MODAL -->
+<div class="modal-overlay" id="groupModal" onclick="closeGroupModal(event)">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 id="groupModalTitle">Add Addon Group</h3>
+      <button class="modal-close" onclick="closeGroupModalDirect()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Group Name *</label>
+        <input type="text" class="form-input" id="groupName" placeholder="e.g. Size, Milk Type, Extras">
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:0.75rem">
+        <label class="toggle">
+          <input type="checkbox" id="groupRequired">
+          <span class="toggle-slider"></span>
+        </label>
+        <span style="font-size:0.85rem;font-weight:500;color:var(--text-medium)">Required (customer must choose)</span>
+      </div>
+      <div id="groupFormError" class="form-error" style="display:none"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal close" onclick="closeGroupModalDirect()">Cancel</button>
+      <button class="btn-modal next" onclick="saveGroup()">Save Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADDON MODAL -->
+<div class="modal-overlay" id="addonModal" onclick="closeAddonModal(event)">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <h3 id="addonModalTitle">Add Addon</h3>
+      <button class="modal-close" onclick="closeAddonModalDirect()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Option Name *</label>
+        <input type="text" class="form-input" id="addonName" placeholder="e.g. Large, Oat Milk, Extra Shot">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Extra Price (Rs.)</label>
+        <input type="number" class="form-input" id="addonPrice" placeholder="0" min="0">
+      </div>
+      <div id="addonFormError" class="form-error" style="display:none"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal close" onclick="closeAddonModalDirect()">Cancel</button>
+      <button class="btn-modal next" onclick="saveAddon()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASSIGN ADDONS MODAL -->
+<div class="modal-overlay" id="assignModal" onclick="closeAssignModal(event)">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <h3 id="assignModalTitle">Assign Add-ons</h3>
+      <button class="modal-close" onclick="closeAssignModalDirect()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.82rem;color:var(--text-light);margin-bottom:1rem">Select which addon groups apply to this item:</p>
+      <div id="assignGroupsList"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal close" onclick="closeAssignModalDirect()">Cancel</button>
+      <button class="btn-modal next" onclick="saveAssignments()">Save</button>
+    </div>
   </div>
 </div>
 
@@ -1765,6 +1915,7 @@
     orders: ['Orders', 'Manage incoming orders'],
     menu:   ['Menu', 'Manage your menu items'],
     hours:  ['Business Hours', 'Set your opening hours'],
+    addons: ['Add-ons', 'Manage addon groups and options'],
     staff:  ['Staff PINs', 'Manage staff access'],
   };
 
@@ -1777,6 +1928,7 @@
     document.getElementById('pageSubtitle').textContent = pageTitles[page][1];
     if (page === 'menu') loadMenu();
     if (page === 'hours') loadHours();
+    if (page === 'addons') loadAddonGroups();
   }
 
   // ── LOGOUT ──
@@ -1789,6 +1941,220 @@
   function escHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── ADDON MANAGEMENT ──
+  let allAddonGroups = [];
+  let allAddons      = [];
+  let editingGroupId = null;
+  let editingAddonId = null;
+  let addonTargetGroupId = null;
+  let assignTargetItemId = null;
+
+  async function loadAddonGroups() {
+    const list = document.getElementById('addonGroupsList');
+    list.innerHTML = '<div class="loading-spinner"><div class="spinner-ring"></div><p>Loading...</p></div>';
+
+    const [groupsRes, addonsRes] = await Promise.all([
+      supabaseClient.from('addon_groups').select('*').order('id'),
+      supabaseClient.from('addons').select('*').order('id')
+    ]);
+
+    if (groupsRes.error) { list.innerHTML = '<div style="padding:1.5rem;color:var(--text-light)">Failed to load add-ons.</div>'; return; }
+    allAddonGroups = groupsRes.data || [];
+    allAddons      = addonsRes.data || [];
+    renderAddonGroups();
+  }
+
+  function renderAddonGroups() {
+    const list = document.getElementById('addonGroupsList');
+    if (!allAddonGroups.length) {
+      list.innerHTML = '<div class="empty-state"><i class="bi bi-tags"></i><p>No addon groups yet. Click "Add Group" to create one.</p></div>';
+      return;
+    }
+    list.innerHTML = allAddonGroups.map(g => {
+      const groupAddons = allAddons.filter(a => a.group_id === g.id);
+      return `
+        <div class="addon-group-card" id="ag-card-${g.id}">
+          <div class="addon-group-header" onclick="toggleGroup('${g.id}')">
+            <div class="addon-group-name">${escHtml(g.name)}</div>
+            <span class="req-badge ${g.is_required ? 'required' : 'optional'}">${g.is_required ? 'Required' : 'Optional'}</span>
+            <div class="menu-item-actions" onclick="event.stopPropagation()">
+              <button class="btn-icon" onclick="openGroupModal('${g.id}')" title="Edit"><i class="bi bi-pencil"></i></button>
+              <button class="btn-icon danger" onclick="confirmDeleteGroup('${g.id}', '${escHtml(g.name)}')" title="Delete"><i class="bi bi-trash"></i></button>
+            </div>
+            <i class="bi bi-chevron-down group-chevron"></i>
+          </div>
+          <div class="addon-group-body">
+            ${groupAddons.length ? groupAddons.map(a => `
+              <div class="addon-row">
+                <span class="addon-row-name">${escHtml(a.name)}</span>
+                <span class="addon-row-price">${Number(a.price) > 0 ? '+Rs.' + Number(a.price).toLocaleString() : 'Free'}</span>
+                <label class="toggle" title="${a.is_available ? 'Available' : 'Unavailable'}">
+                  <input type="checkbox" ${a.is_available ? 'checked' : ''} onchange="toggleAddonAvailable('${a.id}', this.checked)">
+                  <span class="toggle-slider"></span>
+                </label>
+                <button class="btn-icon" onclick="openAddonModal('${g.id}', '${a.id}')" title="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="btn-icon danger" onclick="confirmDeleteAddon('${a.id}', '${escHtml(a.name)}')" title="Delete"><i class="bi bi-trash"></i></button>
+              </div>`).join('') : '<div style="padding:0.6rem 1.25rem;font-size:0.82rem;color:var(--text-light)">No options yet.</div>'}
+            <button class="btn-add-addon" onclick="openAddonModal('${g.id}')"><i class="bi bi-plus-lg"></i> Add Option</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function toggleGroup(id) {
+    document.getElementById('ag-card-' + id).classList.toggle('expanded');
+  }
+
+  // Group modal
+  function openGroupModal(groupId) {
+    editingGroupId = groupId || null;
+    const g = groupId ? allAddonGroups.find(x => x.id === groupId) : null;
+    document.getElementById('groupModalTitle').textContent = g ? 'Edit Group' : 'Add Addon Group';
+    document.getElementById('groupName').value = g ? g.name : '';
+    document.getElementById('groupRequired').checked = g ? !!g.is_required : false;
+    document.getElementById('groupFormError').style.display = 'none';
+    document.getElementById('groupModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeGroupModal(e) { if (e.target === document.getElementById('groupModal')) closeGroupModalDirect(); }
+  function closeGroupModalDirect() { document.getElementById('groupModal').classList.remove('show'); document.body.style.overflow = ''; editingGroupId = null; }
+
+  async function saveGroup() {
+    const name = document.getElementById('groupName').value.trim();
+    const is_required = document.getElementById('groupRequired').checked;
+    const errEl = document.getElementById('groupFormError');
+    if (!name) { errEl.textContent = 'Group name is required.'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+
+    let error;
+    if (editingGroupId) {
+      ({ error } = await supabaseClient.from('addon_groups').update({ name, is_required }).eq('id', editingGroupId));
+    } else {
+      ({ error } = await supabaseClient.from('addon_groups').insert({ name, is_required }));
+    }
+    if (error) { errEl.textContent = 'Error: ' + error.message; errEl.style.display = 'block'; return; }
+    closeGroupModalDirect();
+    showToast(editingGroupId ? 'Group updated!' : 'Group created!', 'success');
+    await loadAddonGroups();
+  }
+
+  // Addon modal
+  function openAddonModal(groupId, addonId) {
+    addonTargetGroupId = groupId;
+    editingAddonId = addonId || null;
+    const a = addonId ? allAddons.find(x => x.id === addonId) : null;
+    document.getElementById('addonModalTitle').textContent = a ? 'Edit Option' : 'Add Option';
+    document.getElementById('addonName').value = a ? a.name : '';
+    document.getElementById('addonPrice').value = a ? a.price : '0';
+    document.getElementById('addonFormError').style.display = 'none';
+    document.getElementById('addonModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAddonModal(e) { if (e.target === document.getElementById('addonModal')) closeAddonModalDirect(); }
+  function closeAddonModalDirect() { document.getElementById('addonModal').classList.remove('show'); document.body.style.overflow = ''; editingAddonId = null; }
+
+  async function saveAddon() {
+    const name = document.getElementById('addonName').value.trim();
+    const price = parseFloat(document.getElementById('addonPrice').value) || 0;
+    const errEl = document.getElementById('addonFormError');
+    if (!name) { errEl.textContent = 'Option name is required.'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+
+    let error;
+    if (editingAddonId) {
+      ({ error } = await supabaseClient.from('addons').update({ name, price }).eq('id', editingAddonId));
+    } else {
+      ({ error } = await supabaseClient.from('addons').insert({ name, price, group_id: addonTargetGroupId, is_available: true }));
+    }
+    if (error) { errEl.textContent = 'Error: ' + error.message; errEl.style.display = 'block'; return; }
+    closeAddonModalDirect();
+    showToast(editingAddonId ? 'Option updated!' : 'Option added!', 'success');
+    await loadAddonGroups();
+    document.getElementById(`ag-card-${addonTargetGroupId}`)?.classList.add('expanded');
+  }
+
+  async function toggleAddonAvailable(id, val) {
+    const { error } = await supabaseClient.from('addons').update({ is_available: val }).eq('id', id);
+    if (error) { showToast('Failed to update', 'error'); await loadAddonGroups(); }
+  }
+
+  function confirmDeleteGroup(id, name) {
+    document.getElementById('confirmMsg').textContent = `Delete group "${name}" and all its options? This cannot be undone.`;
+    document.getElementById('confirmYesBtn').onclick = async () => {
+      closeConfirm();
+      const { error } = await supabaseClient.from('addon_groups').delete().eq('id', id);
+      if (error) { showToast('Failed to delete group', 'error'); return; }
+      showToast(`"${name}" deleted`, 'success');
+      await loadAddonGroups();
+    };
+    document.getElementById('confirmOverlay').classList.add('show');
+  }
+
+  function confirmDeleteAddon(id, name) {
+    document.getElementById('confirmMsg').textContent = `Delete option "${name}"?`;
+    document.getElementById('confirmYesBtn').onclick = async () => {
+      closeConfirm();
+      const { error } = await supabaseClient.from('addons').delete().eq('id', id);
+      if (error) { showToast('Failed to delete option', 'error'); return; }
+      showToast(`"${name}" deleted`, 'success');
+      await loadAddonGroups();
+    };
+    document.getElementById('confirmOverlay').classList.add('show');
+  }
+
+  // Assign addons to menu item
+  async function openAssignModal(itemId, itemName) {
+    assignTargetItemId = itemId;
+    document.getElementById('assignModalTitle').textContent = `Add-ons for ${itemName}`;
+    const listEl = document.getElementById('assignGroupsList');
+    listEl.innerHTML = '<div style="text-align:center;padding:1rem"><div class="spinner-ring" style="margin:auto"></div></div>';
+    document.getElementById('assignModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+
+    const [groupsRes, assignedRes] = await Promise.all([
+      supabaseClient.from('addon_groups').select('*').order('id'),
+      supabaseClient.from('menu_item_addon_groups').select('addon_group_id').eq('menu_item_id', itemId)
+    ]);
+
+    const groups = groupsRes.data || [];
+    const assigned = new Set((assignedRes.data || []).map(r => r.addon_group_id));
+
+    if (!groups.length) {
+      listEl.innerHTML = '<p style="color:var(--text-light);font-size:0.85rem">No addon groups yet. Create groups in the Add-ons section first.</p>';
+      return;
+    }
+
+    listEl.innerHTML = groups.map(g => `
+      <div class="assign-group-row">
+        <input type="checkbox" id="assign-${g.id}" ${assigned.has(g.id) ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;accent-color:var(--secondary)">
+        <label for="assign-${g.id}">${escHtml(g.name)} <span style="color:var(--text-light);font-size:0.78rem">${g.is_required ? '(Required)' : '(Optional)'}</span></label>
+      </div>
+    `).join('');
+  }
+
+  function closeAssignModal(e) { if (e.target === document.getElementById('assignModal')) closeAssignModalDirect(); }
+  function closeAssignModalDirect() { document.getElementById('assignModal').classList.remove('show'); document.body.style.overflow = ''; assignTargetItemId = null; }
+
+  async function saveAssignments() {
+    const checkboxes = document.querySelectorAll('#assignGroupsList input[type="checkbox"]');
+    const selectedIds = [];
+    checkboxes.forEach(cb => { if (cb.checked) selectedIds.push(cb.id.replace('assign-', '')); });
+
+    const { error: delErr } = await supabaseClient.from('menu_item_addon_groups').delete().eq('menu_item_id', assignTargetItemId);
+    if (delErr) { showToast('Delete error: ' + delErr.message, 'error'); return; }
+
+    if (selectedIds.length) {
+      const rows = selectedIds.map(gid => ({ menu_item_id: assignTargetItemId, addon_group_id: gid }));
+      const { error } = await supabaseClient.from('menu_item_addon_groups').insert(rows);
+      if (error) { showToast('Insert error: ' + error.message, 'error'); return; }
+    }
+
+    closeAssignModalDirect();
+    showToast('Add-ons assigned!', 'success');
   }
 
   // ── BUSINESS HOURS ──
@@ -1907,6 +2273,7 @@
                 <input type="checkbox" ${item.is_available ? 'checked' : ''} onchange="toggleAvailable(${item.id}, this.checked)">
                 <span class="toggle-slider"></span>
               </label>
+              <button class="btn-icon" onclick="openAssignModal(${item.id}, '${escHtml(item.name)}')" title="Add-ons"><i class="bi bi-tags"></i></button>
               <button class="btn-icon" onclick="openMenuModal(${item.id})" title="Edit"><i class="bi bi-pencil"></i></button>
               <button class="btn-icon danger" onclick="confirmDeleteMenuItem(${item.id}, '${escHtml(item.name)}')" title="Delete"><i class="bi bi-trash"></i></button>
             </div>

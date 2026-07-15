@@ -902,6 +902,27 @@
         </div>
     </div>
 
+    <!-- Addon Selection Modal -->
+    <div class="modal fade" id="addonModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content addon-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addonModalItemName">Customize Your Order</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-3" id="addonGroupsContainer">
+                    <!-- Addon groups loaded dynamically -->
+                </div>
+                <div class="modal-footer d-flex align-items-center justify-content-between">
+                    <div class="addon-price-total">Rs. <span id="addonTotalPrice">0</span></div>
+                    <button type="button" class="btn btn-success px-4" id="addonAddToCartBtn">
+                        <i class="bi bi-cart-plus me-2"></i>Add to Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Gallery Lightbox -->
     <div class="lightbox" id="lightbox">
         <button class="lightbox-close" id="lightboxClose"><i class="bi bi-x-lg"></i></button>

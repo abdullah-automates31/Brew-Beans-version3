@@ -19,13 +19,24 @@ $(document).ready(function () {
         if (!Array.isArray(storedCart)) return [];
         return storedCart
             .filter(item => item && typeof item.id === 'number' && typeof item.price === 'number' && Number.isFinite(item.quantity) && item.quantity > 0)
-            .map(item => ({
-                id: Number(item.id),
-                name: item.name || '',
-                price: Number(item.price),
-                image: item.image || '',
-                quantity: Number(item.quantity)
-            }));
+            .map(item => {
+                const selectedAddons = Array.isArray(item.selectedAddons)
+                    ? item.selectedAddons.filter(a => a && typeof a.name === 'string')
+                    : [];
+                const cartKey = item.cartKey || (selectedAddons.length
+                    ? `${item.id}_${selectedAddons.map(a => a.name).join('|')}`
+                    : String(item.id));
+                return {
+                    id: Number(item.id),
+                    cartKey,
+                    name: item.name || '',
+                    price: Number(item.price),
+                    addonPrice: Number(item.addonPrice) || 0,
+                    selectedAddons,
+                    image: item.image || '',
+                    quantity: Number(item.quantity)
+                };
+            });
     }
 
     // Corrupted localStorage (bad JSON from a browser extension, a previous
@@ -334,13 +345,18 @@ $(document).ready(function () {
         let subtotal = 0;
 
         cart.forEach(item => {
-            const itemTotal = item.price * item.quantity;
+            const unitPrice = item.price + (item.addonPrice || 0);
+            const itemTotal = unitPrice * item.quantity;
             subtotal += itemTotal;
+            const addonHtml = item.selectedAddons && item.selectedAddons.length
+                ? `<div class="cart-item-addons">${item.selectedAddons.map(a => a.price > 0 ? `${a.name} +Rs.${a.price}` : a.name).join(' · ')}</div>`
+                : '';
             const html = `
-                <div class="cart-item" data-id="${item.id}">
+                <div class="cart-item" data-cart-key="${item.cartKey}">
                     <img src="${item.image}" alt="${item.name}" class="cart-item-img">
                     <div class="cart-item-info">
                         <div class="cart-item-name">${item.name}</div>
+                        ${addonHtml}
                         <div class="cart-item-price">Rs. ${itemTotal}</div>
                         <div class="cart-item-actions">
                             <button class="cart-qty-btn qty-minus"><i class="bi bi-dash"></i></button>
@@ -363,46 +379,194 @@ $(document).ready(function () {
         $('#grandTotal').text(`Rs. ${grandTotal}`);
     }
 
-    // Add to cart
-    $(document).on('click', '.btn-add-cart', function () {
-        const id = parseInt($(this).data('id'));
-        const menuItem = menuItems.find(item => item.id === id);
+    // ==========================================
+    // ADDON SELECTION
+    // ==========================================
+    let currentAddonItem = null;
 
-        if (!menuItem) return;
-
-        const existingItem = cart.find(item => item.id === id);
-
+    function addDirectToCart(menuItem, $btn) {
+        const cartKey = String(menuItem.id);
+        const existingItem = cart.find(item => item.cartKey === cartKey);
         if (existingItem) {
             existingItem.quantity++;
         } else {
             cart.push({
                 id: menuItem.id,
+                cartKey,
                 name: menuItem.name,
                 price: menuItem.price,
+                addonPrice: 0,
+                selectedAddons: [],
                 image: menuItem.image,
                 quantity: 1
             });
         }
-
         updateCart();
         showToast(`${menuItem.name} added to cart!`);
+        if ($btn) {
+            $btn.addClass('added').html('<i class="bi bi-check-lg"></i> Added');
+            setTimeout(() => $btn.removeClass('added').html('<i class="bi bi-plus-lg"></i> Add'), 1500);
+        }
+    }
 
-        // Button animation
+    async function openAddonModal(menuItem, groupIds) {
+        currentAddonItem = menuItem;
+        $('#addonModalItemName').text(menuItem.name);
+        $('#addonTotalPrice').text(menuItem.price);
+
+        const $container = $('#addonGroupsContainer');
+        $container.html('<div class="text-center py-4"><div class="spinner-border text-success spinner-border-sm"></div><p class="mt-2 text-muted small">Loading options...</p></div>');
+        addonModal.show();
+
+        const { data: groups, error } = await supabaseClient
+            .from('addon_groups')
+            .select('id, name, is_required, addons(id, name, price, is_available)')
+            .in('id', groupIds);
+
+        if (error || !groups) {
+            $container.html('<p class="text-center text-muted py-3 small">Could not load options.</p>');
+            return;
+        }
+
+        const validGroups = groups
+            .map(g => ({ ...g, addons: (g.addons || []).filter(a => a.is_available) }))
+            .filter(g => g.addons.length > 0)
+            .sort((a, b) => (a.is_required === b.is_required ? a.name.localeCompare(b.name) : a.is_required ? -1 : 1));
+
+        if (!validGroups.length) {
+            addonModal.hide();
+            addDirectToCart(menuItem, null);
+            return;
+        }
+
+        let html = '';
+        validGroups.forEach(group => {
+            const badge = group.is_required
+                ? '<span class="addon-required-badge">Required</span>'
+                : '<span class="addon-optional-badge">Optional</span>';
+            const optionsHtml = group.addons.map(addon => `
+                <div class="addon-option"
+                     data-group-id="${group.id}"
+                     data-required="${group.is_required}"
+                     data-addon-name="${addon.name.replace(/"/g, '&quot;')}"
+                     data-addon-price="${addon.price}">
+                    <span class="addon-option-name">${addon.name}</span>
+                    ${addon.price > 0 ? `<span class="addon-option-price">+Rs.${addon.price}</span>` : ''}
+                </div>`).join('');
+            html += `
+                <div class="addon-group">
+                    <div class="addon-group-title">${group.name} ${badge}</div>
+                    <div class="addon-options" data-group-id="${group.id}" data-required="${group.is_required}">
+                        ${optionsHtml}
+                    </div>
+                </div>`;
+        });
+        $container.html(html);
+        updateAddonTotal();
+    }
+
+    function updateAddonTotal() {
+        if (!currentAddonItem) return;
+        let extra = 0;
+        $('.addon-option.selected').each(function () {
+            extra += parseInt($(this).data('addon-price')) || 0;
+        });
+        $('#addonTotalPrice').text(currentAddonItem.price + extra);
+    }
+
+    // Addon option click — radio for required, checkbox for optional
+    $(document).on('click', '.addon-option', function () {
+        const $this = $(this);
+        const groupId = $this.data('group-id');
+        const isRequired = $this.closest('.addon-options').data('required');
+        if (isRequired === true || isRequired === 'true') {
+            $(`.addon-option[data-group-id="${groupId}"]`).removeClass('selected');
+            $this.addClass('selected');
+        } else {
+            $this.toggleClass('selected');
+        }
+        updateAddonTotal();
+    });
+
+    // Add to cart from addon modal
+    $('#addonAddToCartBtn').on('click', function () {
+        if (!currentAddonItem) return;
+
+        let allRequiredFilled = true;
+        $('#addonGroupsContainer .addon-options[data-required="true"]').each(function () {
+            const groupId = $(this).data('group-id');
+            if ($(`.addon-option.selected[data-group-id="${groupId}"]`).length === 0) {
+                allRequiredFilled = false;
+                return false;
+            }
+        });
+
+        if (!allRequiredFilled) {
+            showToast('Please select all required options', 'warning');
+            return;
+        }
+
+        const selectedAddons = [];
+        let addonPrice = 0;
+        $('.addon-option.selected').each(function () {
+            const price = parseInt($(this).data('addon-price')) || 0;
+            selectedAddons.push({ name: $(this).data('addon-name'), price });
+            addonPrice += price;
+        });
+
+        const cartKey = selectedAddons.length
+            ? `${currentAddonItem.id}_${selectedAddons.map(a => a.name).join('|')}`
+            : String(currentAddonItem.id);
+
+        const existingItem = cart.find(item => item.cartKey === cartKey);
+        if (existingItem) {
+            existingItem.quantity++;
+        } else {
+            cart.push({
+                id: currentAddonItem.id,
+                cartKey,
+                name: currentAddonItem.name,
+                price: currentAddonItem.price,
+                addonPrice,
+                selectedAddons,
+                image: currentAddonItem.image,
+                quantity: 1
+            });
+        }
+
+        addonModal.hide();
+        updateCart();
+        showToast(`${currentAddonItem.name} added to cart!`);
+        currentAddonItem = null;
+    });
+
+    // Add to cart (checks for addon groups first)
+    $(document).on('click', '.btn-add-cart', async function () {
+        const id = parseInt($(this).data('id'));
+        const menuItem = menuItems.find(item => item.id === id);
+        if (!menuItem) return;
+
         const $btn = $(this);
-        $btn.addClass('added');
-        $btn.html('<i class="bi bi-check-lg"></i> Added');
-        setTimeout(() => {
-            $btn.removeClass('added');
-            $btn.html('<i class="bi bi-plus-lg"></i> Add');
-        }, 1500);
+        $btn.prop('disabled', true);
+
+        const { data: groupLinks } = await supabaseClient
+            .from('menu_item_addon_groups')
+            .select('addon_group_id')
+            .eq('menu_item_id', id);
+
+        $btn.prop('disabled', false);
+
+        if (groupLinks && groupLinks.length > 0) {
+            openAddonModal(menuItem, groupLinks.map(g => g.addon_group_id));
+        } else {
+            addDirectToCart(menuItem, $btn);
+        }
     });
 
     // Cart quantity controls
     $(document).on('click', '.qty-minus', function () {
-        const $item = $(this).closest('.cart-item');
-        const id = parseInt($item.data('id'));
-        const cartItem = cart.find(item => item.id === id);
-
+        const cartKey = $(this).closest('.cart-item').data('cart-key');
+        const cartItem = cart.find(item => item.cartKey === cartKey);
         if (cartItem && cartItem.quantity > 1) {
             cartItem.quantity--;
             updateCart();
@@ -410,10 +574,8 @@ $(document).ready(function () {
     });
 
     $(document).on('click', '.qty-plus', function () {
-        const $item = $(this).closest('.cart-item');
-        const id = parseInt($item.data('id'));
-        const cartItem = cart.find(item => item.id === id);
-
+        const cartKey = $(this).closest('.cart-item').data('cart-key');
+        const cartItem = cart.find(item => item.cartKey === cartKey);
         if (cartItem) {
             cartItem.quantity++;
             updateCart();
@@ -421,9 +583,8 @@ $(document).ready(function () {
     });
 
     $(document).on('click', '.cart-item-remove', function () {
-        const $item = $(this).closest('.cart-item');
-        const id = parseInt($item.data('id'));
-        cart = cart.filter(item => item.id !== id);
+        const cartKey = $(this).closest('.cart-item').data('cart-key');
+        cart = cart.filter(item => item.cartKey !== cartKey);
         updateCart();
         showToast('Item removed from cart');
     });
@@ -446,6 +607,7 @@ $(document).ready(function () {
     // ==========================================
     const checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
     const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+    const addonModal = new bootstrap.Modal(document.getElementById('addonModal'));
     let checkoutLatLng = null;
 
     $('#checkoutBtn').on('click', function () {
@@ -476,13 +638,17 @@ $(document).ready(function () {
 
         let subtotal = 0;
         cart.forEach(item => {
-            const itemTotal = item.price * item.quantity;
+            const unitPrice = item.price + (item.addonPrice || 0);
+            const itemTotal = unitPrice * item.quantity;
             subtotal += itemTotal;
+            const addonNames = item.selectedAddons && item.selectedAddons.length
+                ? `<span class="checkout-item-addons">${item.selectedAddons.map(a => a.name).join(', ')}</span>`
+                : '';
             const html = `
                 <div class="checkout-item">
                     <span class="checkout-item-name">
                         <span class="checkout-item-qty">${item.quantity}x</span>
-                        ${item.name}
+                        ${item.name}${addonNames}
                     </span>
                     <span>Rs. ${itemTotal}</span>
                 </div>
@@ -531,7 +697,7 @@ $(document).ready(function () {
         $('#deliveryEstimate').show();
 
         // Update checkout delivery
-        const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const subtotal = cart.reduce((sum, item) => sum + ((item.price + (item.addonPrice || 0)) * item.quantity), 0);
         const finalDelivery = subtotal > 1000 ? 0 : deliveryCost;
         $('#checkoutDelivery').text(finalDelivery === 0 ? 'FREE' : `Rs. ${finalDelivery}`);
         $('#checkoutTotal').text(`Rs. ${subtotal + finalDelivery}`);
@@ -575,6 +741,13 @@ $(document).ready(function () {
         try {
             const items = cart.map(item => ({ menu_item_id: item.id, quantity: item.quantity }));
 
+            // Append addon selections to notes so staff always see them
+            const addonSummary = cart
+                .filter(ci => ci.selectedAddons && ci.selectedAddons.length > 0)
+                .map(ci => `${ci.name}: ${ci.selectedAddons.map(a => a.name).join(', ')}`)
+                .join(' | ');
+            const fullNotes = [notes, addonSummary].filter(Boolean).join('\n');
+
             const { data, error } = await supabaseClient.rpc('create_order', {
                 p_customer_name: fullName,
                 p_phone: phone,
@@ -582,7 +755,7 @@ $(document).ready(function () {
                 p_address: address,
                 p_lat: checkoutLatLng ? checkoutLatLng.lat : null,
                 p_lng: checkoutLatLng ? checkoutLatLng.lng : null,
-                p_notes: notes || null,
+                p_notes: fullNotes || null,
                 p_payment_method: paymentMethod,
                 p_items: items
             });
@@ -592,6 +765,12 @@ $(document).ready(function () {
             const order = Array.isArray(data) ? data[0] : data;
             const orderNumber = order.order_number;
             const total = order.total;
+
+            // Save addon selections (fire-and-forget; never blocks order completion)
+            const cartWithAddons = cart.filter(ci => ci.selectedAddons && ci.selectedAddons.length > 0);
+            if (cartWithAddons.length > 0) {
+                insertOrderAddons(orderNumber, cartWithAddons);
+            }
 
             if (paymentMethod === 'cod') {
                 completeOrderSuccess(orderNumber, total, phone, order.delivery_charge);
@@ -640,6 +819,37 @@ $(document).ready(function () {
             $btn.prop('disabled', false);
         }
     });
+
+    async function insertOrderAddons(orderNumber, cartWithAddons) {
+        try {
+            const { data: orderRow } = await supabaseClient
+                .from('orders')
+                .select('id')
+                .eq('order_number', orderNumber)
+                .single();
+            if (!orderRow) return;
+
+            const { data: orderItems } = await supabaseClient
+                .from('order_items')
+                .select('id, menu_item_id')
+                .eq('order_id', orderRow.id);
+            if (!orderItems) return;
+
+            const addonInserts = [];
+            cartWithAddons.forEach(cartItem => {
+                const oi = orderItems.find(o => o.menu_item_id === cartItem.id);
+                if (!oi) return;
+                cartItem.selectedAddons.forEach(addon => {
+                    addonInserts.push({ order_item_id: oi.id, addon_name: addon.name, addon_price: addon.price });
+                });
+            });
+            if (addonInserts.length) {
+                await supabaseClient.from('order_item_addons').insert(addonInserts);
+            }
+        } catch (e) {
+            console.error('Could not save addon selections:', e);
+        }
+    }
 
     function completeOrderSuccess(orderNumber, total, phone, deliveryCharge) {
         checkoutModal.hide();
