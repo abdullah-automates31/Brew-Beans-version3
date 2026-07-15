@@ -776,11 +776,6 @@ $(document).ready(function () {
             const orderNumber = order.order_number;
             const total = order.total;
 
-            // Save addon selections (fire-and-forget; never blocks order completion)
-            const cartWithAddons = cart.filter(ci => ci.selectedAddons && ci.selectedAddons.length > 0);
-            if (cartWithAddons.length > 0) {
-                insertOrderAddons(orderNumber, cartWithAddons);
-            }
 
             if (paymentMethod === 'cod') {
                 completeOrderSuccess(orderNumber, total, phone, order.delivery_charge);
@@ -830,36 +825,6 @@ $(document).ready(function () {
         }
     });
 
-    async function insertOrderAddons(orderNumber, cartWithAddons) {
-        try {
-            const { data: orderRow } = await supabaseClient
-                .from('orders')
-                .select('id')
-                .eq('order_number', orderNumber)
-                .single();
-            if (!orderRow) return;
-
-            const { data: orderItems } = await supabaseClient
-                .from('order_items')
-                .select('id, menu_item_id')
-                .eq('order_id', orderRow.id);
-            if (!orderItems) return;
-
-            const addonInserts = [];
-            cartWithAddons.forEach(cartItem => {
-                const oi = orderItems.find(o => o.menu_item_id === cartItem.id);
-                if (!oi) return;
-                cartItem.selectedAddons.forEach(addon => {
-                    addonInserts.push({ order_item_id: oi.id, addon_name: addon.name, addon_price: addon.price });
-                });
-            });
-            if (addonInserts.length) {
-                await supabaseClient.from('order_item_addons').insert(addonInserts);
-            }
-        } catch (e) {
-            console.error('Could not save addon selections:', e);
-        }
-    }
 
     function completeOrderSuccess(orderNumber, total, phone, deliveryCharge) {
         checkoutModal.hide();
