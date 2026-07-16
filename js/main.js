@@ -836,7 +836,7 @@ $(document).ready(function () {
                 quantity: item.quantity,
                 addons: item.selectedAddons && item.selectedAddons.length
                     ? item.selectedAddons.map(a => ({ name: a.name, price: a.price }))
-                    : null
+                    : []
             }));
 
             // Append addon selections to notes so staff always see them
