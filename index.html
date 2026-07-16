@@ -147,6 +147,12 @@
                     <li class="nav-item"><a class="nav-link" href="#gallery">Gallery</a></li>
                     <li class="nav-item"><a class="nav-link" href="#reviews">Reviews</a></li>
                     <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                    <li class="nav-item ms-lg-2" id="shopBanner" style="display:none;">
+                        <span id="shopBannerInner" style="display:inline-flex;align-items:center;gap:0.35rem;padding:0.2rem 0.65rem;border-radius:999px;font-family:'Poppins',sans-serif;font-size:0.72rem;font-weight:500;letter-spacing:0.02em;background:rgba(255,255,255,0.12);">
+                            <span id="shopBannerDot" style="width:6px;height:6px;border-radius:50%;flex-shrink:0;"></span>
+                            <span id="shopBannerText"></span>
+                        </span>
+                    </li>
                     <li class="nav-item ms-lg-3">
                         <button class="btn btn-cart" id="cartToggle">
                             <i class="bi bi-bag"></i>
@@ -157,14 +163,6 @@
             </div>
         </div>
     </nav>
-
-    <!-- Business Hours Banner -->
-    <div id="shopBanner" style="display:none;position:fixed;top:70px;left:0;right:0;z-index:998;">
-      <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;padding:0.4rem 1rem;font-family:'Poppins',sans-serif;font-size:0.78rem;font-weight:500;letter-spacing:0.02em;">
-        <span id="shopBannerDot" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;"></span>
-        <span id="shopBannerText"></span>
-      </div>
-    </div>
 
     <!-- Cart Sidebar -->
     <div class="cart-sidebar" id="cartSidebar">

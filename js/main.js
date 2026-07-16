@@ -1113,13 +1113,14 @@ $(document).ready(function () {
 
     function showBanner(text, isOpen) {
         const banner = document.getElementById('shopBanner');
+        const inner  = document.getElementById('shopBannerInner');
         const dot    = document.getElementById('shopBannerDot');
         const label  = document.getElementById('shopBannerText');
         if (!banner) return;
-        banner.style.display = 'block';
-        banner.style.background = isOpen ? 'rgba(21,128,61,0.92)' : 'rgba(185,28,28,0.92)';
-        banner.style.backdropFilter = 'blur(4px)';
-        banner.style.color = 'white';
+        banner.style.display = '';
+        inner.style.background = isOpen ? 'rgba(21,128,61,0.85)' : 'rgba(185,28,28,0.85)';
+        inner.style.backdropFilter = 'blur(4px)';
+        inner.style.color = 'white';
         dot.style.background = isOpen ? '#86efac' : '#fca5a5';
         label.textContent = text;
     }
