@@ -45,7 +45,7 @@ You can find screenshots of the project inside the repository.
 1. Clone the repository
 
 ```bash
-git clone https://github.com/AroobaAsghar/Brew-Beans.git
+git clone https://github.com/abdullah-automates31/Brewbeans-development.git
 ```
 
 2. Open the project folder
@@ -58,12 +58,8 @@ cd Brew-Beans
 
 ## 🌐 Live Demo
 
-Add your deployed website link here after deployment.
-
-Example:
-
 ```
-https://your-site.netlify.app
+https://brew-beans-one.vercel.app/
 ```
 
 ## 📌 Future Improvements
@@ -76,12 +72,3 @@ https://your-site.netlify.app
 - Real-time order tracking
 - Database integration
 
-## 👩‍💻 Author
-
-**Arooba Asghar**
-
-- GitHub: https://github.com/AroobaAsghar
-
----
-
-⭐ If you like this project, don't forget to give it a star!
