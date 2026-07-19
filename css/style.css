@@ -1512,9 +1512,9 @@ html.bb-no-splash #loading-screen {
 }
 
 .menu-item-price {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-size: 1.35rem;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--secondary);
 }
 
@@ -3401,9 +3401,9 @@ textarea:focus-visible {
 }
 
 .fav-card-price {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-size: 1.2rem;
-    font-weight: 700;
+    font-weight: 800;
     color: var(--secondary);
 }
 
