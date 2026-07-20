@@ -4,9 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Brew Beans is a static coffee shop website with a Supabase backend. There is no build step — open `index.html` directly in a browser or use a local server (`npx serve .` or VS Code Live Server). For accurate CSP behavior during development, use an HTTP server rather than `file://`. Deployment target is **Vercel** (security headers are configured in `vercel.json` at the repo root). The `_headers` file is a legacy Netlify artifact — keep `vercel.json` in sync with it if either changes.
+Brew Beans is a coffee shop website with a Supabase backend, deployed on **Vercel**. The repo root holds two *separate* projects — edit the one relevant to your task, they don't share code:
+
+| Directory | Stack | Entry point | Status |
+|---|---|---|---|
+| repo root | Static HTML/CSS/JS + CDN deps, no `node_modules` | `index.html` | **Active/deployed** site |
+| `brewbeans-next/` | Next.js 15 + React 18 + Supabase JS v2 | `brewbeans-next/app/` | Rewrite-in-progress, not yet deployed |
+
+**Ignore the nested `Brew-Beans/` subdirectory** — it's an outdated backup copy, distinct from both projects above.
+
+An `AGENTS.md` at the repo root duplicates most of this file for non-Claude agents; keep the two in sync if either changes.
+
+## Commands
+
+**Root static site**: no build step. Open `index.html` directly, or serve it (`npx serve .` / VS Code Live Server) — use an HTTP server rather than `file://` for accurate CSP behavior during development. No automated test suite; verify changes manually at desktop and mobile viewports.
+
+**`brewbeans-next/`** (run from inside that directory):
+- `npm run dev` — dev server (Turbopack)
+- `npm run build` — production build (Turbopack)
+- `npm start` — serve the production build
+- `npm run lint` — Next.js lint
 
 ## Architecture
+
+Everything below (through Payment Gateways) describes the **root static site**. `brewbeans-next/` has its own `app/`, `components/`, `context/`, and `lib/` directories following standard Next.js App Router conventions and is not covered here.
 
 | Page | JS | Purpose |
 |---|---|---|
@@ -82,7 +103,9 @@ All styles are in `css/style.css`. Design tokens are CSS custom properties defin
 
 ## Security Headers
 
-`vercel.json` at the repo root configures response headers including a strict CSP that whitelists specific CDN origins and inline script hashes. **When adding new external scripts or inline `<script>` blocks**, update the CSP in `vercel.json` accordingly — otherwise they will be blocked in production. All user-generated content rendered into the DOM uses `escapeHtml()` or `innerText` assignment to prevent XSS.
+`vercel.json` at the repo root is the **source of truth** (active deployment) and configures response headers including a strict CSP that whitelists specific CDN origins and inline script hashes. **When adding new external scripts or inline `<script>` blocks**, update the CSP in `vercel.json` accordingly — otherwise they will be blocked in production. All user-generated content rendered into the DOM uses `escapeHtml()` or `innerText` assignment to prevent XSS.
+
+The `_headers` file is a legacy Netlify artifact kept for reference; keep it in sync with `vercel.json` when editing either. As of writing, `_headers` has drifted — its CSP `connect-src` points at the wrong Supabase project ref and is missing the `wss://` scheme needed for realtime/websocket connections — so don't treat it as authoritative.
 
 ## External Dependencies (CDN)
 
@@ -96,3 +119,7 @@ All loaded via CDN, no local `node_modules`:
 ## Payment Gateways
 
 JazzCash and EasyPaisa are integrated via form redirects to their payment pages. The `create-payment` Edge Function builds the gateway form fields server-side. Both domains are whitelisted in the CSP `form-action` directive in `vercel.json`. The return URL lands on `order-tracking.html` with a `?payment=success|failed` query param.
+
+## Coding Conventions (root static site)
+
+4-space indentation for HTML/CSS/JS. JS identifiers use `camelCase`; CSS custom properties use kebab-case under `:root`.

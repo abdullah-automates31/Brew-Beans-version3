@@ -52,13 +52,24 @@
     const { data } = await supabaseClient.from('business_hours').select('*').order('day_of_week');
     if (!data) return;
     const hours = data;
-    const now = new Date();
+    const now = getShopNow();
     const day = now.getDay();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+
+    // Still inside yesterday's overnight window (close time past midnight)?
+    const prevHours = hours.find(h => h.day_of_week === (day + 6) % 7);
+    if (prevHours && !prevHours.is_closed) {
+        const [poh, pom] = prevHours.open_time.split(':').map(Number);
+        const [pch, pcm] = prevHours.close_time.split(':').map(Number);
+        const pOpenMins  = poh * 60 + pom;
+        const pCloseMins = pch * 60 + pcm;
+        if (pCloseMins < pOpenMins && nowMins < pCloseMins) { setShopStatus(true); return; }
+    }
+
     const todayHours = hours.find(h => h.day_of_week === day);
     if (!todayHours || todayHours.is_closed) { setShopStatus(false); return; }
     const [oh, om] = todayHours.open_time.split(':').map(Number);
     const [ch, cm] = todayHours.close_time.split(':').map(Number);
-    const nowMins = now.getHours() * 60 + now.getMinutes();
     const openMins = oh * 60 + om;
     let closeMins = ch * 60 + cm;
     if (closeMins < openMins) closeMins += 24 * 60;
