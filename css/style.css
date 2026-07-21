@@ -2742,6 +2742,64 @@ html.bb-no-splash #loading-screen {
     .gallery-item-8 {
         grid-column: auto;
     }
+
+    /* Menu grid shows 2 cards per row below md (see col-6 in main.js) —
+       shrink the card chrome so two fit cleanly instead of the
+       desktop-sized image/padding/type cramping into half the width. */
+    #menuGrid.row {
+        --bs-gutter-x: 0.75rem;
+    }
+
+    .menu-item-img {
+        height: 120px;
+    }
+
+    .menu-item-content {
+        padding: 0.75rem;
+    }
+
+    .menu-item-name {
+        font-size: 0.95rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .menu-item-desc {
+        font-size: 0.75rem;
+        line-height: 1.4;
+        margin-bottom: 0.5rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .menu-item-footer {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .menu-item-price {
+        font-size: 1rem;
+    }
+
+    .btn-add-cart {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.75rem;
+    }
+
+    .menu-item-badge {
+        top: 8px;
+        left: 8px;
+        padding: 0.25rem 0.55rem;
+        font-size: 0.65rem;
+    }
+
+    .menu-item-tag {
+        top: 8px;
+        right: 8px;
+        padding: 0.22rem 0.5rem;
+        font-size: 0.62rem;
+    }
 }
 
 @media (max-width: 575.98px) {

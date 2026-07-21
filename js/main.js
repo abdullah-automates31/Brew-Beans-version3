@@ -403,7 +403,7 @@ $(document).ready(function () {
                     ? `<span class="menu-item-tag ${_b.cls}">${_b.label}</span>`
                     : item.is_popular ? '<span class="menu-item-tag badge-popular">⭐ Popular</span>' : '';
                 const html = `
-                    <div class="col-12 col-md-6 col-lg-3 motion-pop">
+                    <div class="col-6 col-md-6 col-lg-3 motion-pop">
                         <div class="menu-item" data-id="${item.id}">
                             <div class="menu-item-img">
                                 <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">
