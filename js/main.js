@@ -94,47 +94,326 @@ $(document).ready(function () {
     }, 2500);
 
     // ==========================================
-    // LOCATION PERMISSION
+    // LOCATION SELECTION MODAL
+    // First-visit gate: pick Delivery/Pickup + a Karachi area. Reuses the
+    // same 'brewBeansLocation' {lat,lng} key the checkout flow already
+    // reads (see userLocation above and renderCheckoutSummary below) so
+    // nothing downstream needs to change — this just becomes the primary
+    // way that key gets populated now, in addition to raw geolocation.
     // ==========================================
-    const locationModal = new bootstrap.Modal(document.getElementById('locationModal'));
+    const LOC_STORAGE_KEY = 'brewBeansDeliveryLocation';
+    // Covers every curated area except the three furthest out (DHA Phase 8,
+    // Keamari, Do Darya, all 14.5km+) — see the area list's approximate
+    // centroids below for the actual distance each one works out to.
+    const DELIVERY_RADIUS_KM = 14;
 
-    // Show location modal after loading
-    setTimeout(function () {
-        if (!userLocation) {
-            locationModal.show();
+    // Approximate area centroids — good enough for the radius/ETA check
+    // below; the real per-order delivery charge still comes from the
+    // precise Haversine calculation against the customer's exact
+    // geolocation or address at checkout (see calculateDeliveryEstimate).
+    const KARACHI_AREAS = [
+        { name: 'Clifton', lat: 24.8138, lng: 67.0300 },
+        { name: 'DHA Phase 1', lat: 24.8090, lng: 67.0630 },
+        { name: 'DHA Phase 2', lat: 24.8000, lng: 67.0550 },
+        { name: 'DHA Phase 4', lat: 24.8150, lng: 67.0650 },
+        { name: 'DHA Phase 5', lat: 24.8080, lng: 67.0580 },
+        { name: 'DHA Phase 6', lat: 24.8020, lng: 67.0680 },
+        { name: 'DHA Phase 8', lat: 24.7950, lng: 67.0450 },
+        { name: 'Gulshan-e-Iqbal', lat: 24.9180, lng: 67.0971 },
+        { name: 'Gulistan-e-Johar', lat: 24.9270, lng: 67.1280 },
+        { name: 'PECHS', lat: 24.8720, lng: 67.0640 },
+        { name: 'Bahadurabad', lat: 24.8780, lng: 67.0620 },
+        { name: 'North Nazimabad', lat: 24.9330, lng: 67.0470 },
+        { name: 'Nazimabad', lat: 24.9060, lng: 67.0330 },
+        { name: 'Federal B Area', lat: 24.9200, lng: 67.0530 },
+        { name: 'Saddar', lat: 24.8560, lng: 67.0180 },
+        { name: 'Malir', lat: 24.8930, lng: 67.2050 },
+        { name: 'Korangi', lat: 24.8460, lng: 67.1330 },
+        { name: 'Defence View', lat: 24.8100, lng: 67.0500 },
+        { name: 'Shah Faisal Colony', lat: 24.8650, lng: 67.1850 },
+        { name: 'Scheme 33', lat: 24.9420, lng: 67.1720 },
+        { name: 'Buffer Zone', lat: 24.9560, lng: 67.0500 },
+        { name: 'Landhi', lat: 24.8480, lng: 67.2100 },
+        { name: 'Keamari', lat: 24.8330, lng: 66.9800 },
+        { name: 'Orangi Town', lat: 24.9450, lng: 66.9800 },
+        { name: 'Lyari', lat: 24.8730, lng: 66.9930 },
+        { name: 'Tipu Sultan Road', lat: 24.8580, lng: 67.0530 },
+        { name: 'University Road', lat: 24.9350, lng: 67.0870 },
+        { name: 'Tariq Road', lat: 24.8700, lng: 67.0580 },
+        { name: 'Boat Basin', lat: 24.8280, lng: 67.0330 },
+        { name: 'Do Darya', lat: 24.7950, lng: 67.0100 }
+    ];
+
+    const locationModal = new bootstrap.Modal(document.getElementById('locationModal'));
+    const $locModal = $('#locationModal');
+    const $areaInput = $('#locAreaInput');
+    const $areaDropdown = $('#locAreaDropdown');
+    const $orderType = $('.loc-order-type');
+    const $continueBtn = $('#locContinueBtn');
+    const $availability = $('#locAvailability');
+    const $detectStatus = $('#locDetectStatus');
+    const $useCurrentBtn = $('#locUseCurrentBtn');
+
+    let locState = safeReadLocalStorage(LOC_STORAGE_KEY) || null;
+    let locOrderType = (locState && locState.orderType) || 'delivery';
+    let locSelectedArea = (locState && locState.area) || null; // { name, lat, lng }
+
+    // Tag this modal's own backdrop (and only this one) so the CSS blur
+    // in style.css doesn't bleed into the cart/checkout/addon modals.
+    $locModal.on('show.bs.modal', function () {
+        requestAnimationFrame(function () {
+            $('.modal-backdrop').addClass('loc-modal-backdrop');
+        });
+    });
+
+    function distanceKm(lat1, lon1, lat2, lon2) {
+        return calculateDistance(lat1, lon1, lat2, lon2);
+    }
+
+    function renderAreaDropdown(filterText) {
+        const q = (filterText || '').trim().toLowerCase();
+        const matches = KARACHI_AREAS.filter(a => a.name.toLowerCase().includes(q));
+        $areaDropdown.empty();
+        if (!matches.length) {
+            $areaDropdown.append('<div class="loc-dropdown-empty">No matching area found</div>');
+            return;
         }
-    }, 3000);
+        matches.forEach(area => {
+            const isSelected = locSelectedArea && locSelectedArea.name === area.name;
+            const $item = $(`
+                <button type="button" class="loc-dropdown-item${isSelected ? ' is-selected' : ''}" data-name="${escapeHtml(area.name)}">
+                    <i class="bi bi-geo-alt-fill"></i><span>${escapeHtml(area.name)}</span>
+                </button>
+            `);
+            $areaDropdown.append($item);
+        });
+    }
+
+    function openDropdown() {
+        $('.loc-search').addClass('is-open');
+        $areaInput.attr('aria-expanded', 'true');
+    }
+
+    function closeDropdown() {
+        $('.loc-search').removeClass('is-open');
+        $areaInput.attr('aria-expanded', 'false');
+    }
+
+    function updateAvailability() {
+        if (!locSelectedArea) {
+            $availability.removeClass('is-visible is-available is-unavailable');
+            return;
+        }
+
+        if (locOrderType === 'pickup') {
+            $availability
+                .removeClass('is-unavailable')
+                .addClass('is-visible is-available')
+                .html('<i class="bi bi-shop-window"></i><div><span class="loc-availability-title">Pickup Available</span>Ready in ~15 mins at our Gulshan-e-Iqbal branch.</div>');
+            return;
+        }
+
+        const dist = distanceKm(SHOP_LAT, SHOP_LNG, locSelectedArea.lat, locSelectedArea.lng);
+        if (dist <= DELIVERY_RADIUS_KM) {
+            $availability
+                .removeClass('is-unavailable')
+                .addClass('is-visible is-available')
+                .html('<i class="bi bi-check-circle-fill"></i><div><span class="loc-availability-title">Delivery Available</span>Estimated Delivery: 25–35 mins</div>');
+        } else {
+            $availability
+                .removeClass('is-available')
+                .addClass('is-visible is-unavailable')
+                .html('<i class="bi bi-exclamation-triangle-fill"></i><div><span class="loc-availability-title">Currently unavailable for delivery</span>Please choose Pickup.</div>');
+        }
+    }
+
+    function canContinue() {
+        if (!locSelectedArea) return false;
+        if (locOrderType === 'pickup') return true;
+        return distanceKm(SHOP_LAT, SHOP_LNG, locSelectedArea.lat, locSelectedArea.lng) <= DELIVERY_RADIUS_KM;
+    }
+
+    function updateContinueState() {
+        $continueBtn.prop('disabled', !canContinue());
+    }
+
+    function updateNavLocationDisplay() {
+        if (locSelectedArea) {
+            $('#navLocationLabel').text(locOrderType === 'pickup' ? 'Pickup' : 'Delivery');
+            $('#navLocationValue').text(locSelectedArea.name);
+        }
+    }
+
+    function selectArea(area) {
+        locSelectedArea = area;
+        $areaInput.val(area.name);
+        closeDropdown();
+        updateAvailability();
+        updateContinueState();
+    }
+
+    function setOrderType(type) {
+        locOrderType = type;
+        $orderType.attr('data-active', type);
+        $orderType.find('.loc-order-btn').each(function () {
+            const isActive = $(this).data('order-type') === type;
+            $(this).toggleClass('is-active', isActive).attr('aria-selected', isActive ? 'true' : 'false');
+        });
+        updateAvailability();
+        updateContinueState();
+    }
+
+    // Pre-fill from a saved selection — both on first render and whenever
+    // the modal is reopened via "Change Location" in the header, so
+    // returning users can just hit Continue if nothing needs to change.
+    function populateFromState() {
+        setOrderType(locOrderType);
+        if (locSelectedArea) {
+            $areaInput.val(locSelectedArea.name);
+        }
+        renderAreaDropdown('');
+        updateAvailability();
+        updateContinueState();
+    }
+
+    $orderType.on('click', '.loc-order-btn', function () {
+        setOrderType($(this).data('order-type'));
+    });
+
+    $areaInput.on('focus', function () {
+        renderAreaDropdown($(this).val());
+        openDropdown();
+    });
+
+    $areaInput.on('input', function () {
+        locSelectedArea = null;
+        updateAvailability();
+        updateContinueState();
+        renderAreaDropdown($(this).val());
+        openDropdown();
+    });
+
+    // Delay so the dropdown's own click handler (below) still fires
+    // before the input's blur closes it.
+    $areaInput.on('blur', function () {
+        setTimeout(closeDropdown, 150);
+    });
+
+    $areaDropdown.on('click', '.loc-dropdown-item', function () {
+        const name = $(this).data('name');
+        const area = KARACHI_AREAS.find(a => a.name === name);
+        if (area) selectArea(area);
+    });
+
+    // Best-effort match of a Nominatim reverse-geocode result against the
+    // curated area list — real addresses rarely line up with our fixed
+    // names exactly, so this checks the common address fields plus a
+    // DHA/Defence + phase-number special case before giving up.
+    function matchAreaFromAddress(address, displayName) {
+        const haystack = [
+            address.suburb, address.neighbourhood, address.city_district,
+            address.residential, address.quarter, address.town, address.county,
+            displayName
+        ].filter(Boolean).join(' ').toLowerCase();
+
+        const direct = KARACHI_AREAS.find(a => haystack.includes(a.name.toLowerCase()));
+        if (direct) return direct;
+
+        const phaseMatch = haystack.match(/(?:dha|defence)[^\d]{0,20}(\d)/);
+        if (phaseMatch) {
+            const byPhase = KARACHI_AREAS.find(a => a.name === `DHA Phase ${phaseMatch[1]}`);
+            if (byPhase) return byPhase;
+        }
+        if (/dha|defence/.test(haystack)) {
+            return KARACHI_AREAS.find(a => a.name === 'Defence View') || null;
+        }
+
+        return null;
+    }
+
+    function isRoughlyInKarachi(lat, lng) {
+        return lat >= 24.75 && lat <= 25.05 && lng >= 66.90 && lng <= 67.25;
+    }
+
+    $useCurrentBtn.on('click', function () {
+        if (!navigator.geolocation) {
+            $detectStatus.attr('class', 'loc-detect-status is-error').text("We couldn't access your location. Please choose your area manually.");
+            return;
+        }
+
+        const $icon = $useCurrentBtn.find('i');
+        $icon.removeClass('bi-crosshair').addClass('bi-arrow-repeat spin');
+        $detectStatus.attr('class', 'loc-detect-status').text('Detecting your location...');
+
+        navigator.geolocation.getCurrentPosition(
+            function (position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                $icon.removeClass('bi-arrow-repeat spin').addClass('bi-crosshair');
+
+                if (!isRoughlyInKarachi(lat, lng)) {
+                    $detectStatus.attr('class', 'loc-detect-status is-error').text("We couldn't find your area in Karachi. Please choose your area manually.");
+                    return;
+                }
+
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`, {
+                    headers: { 'Accept': 'application/json' }
+                })
+                    .then(res => res.ok ? res.json() : Promise.reject(new Error('reverse geocode failed')))
+                    .then(data => {
+                        const matched = matchAreaFromAddress(data.address || {}, data.display_name || '');
+                        if (matched) {
+                            selectArea(matched);
+                            $detectStatus.attr('class', 'loc-detect-status is-success').html('<i class="bi bi-check-circle-fill me-1"></i>Location detected successfully');
+                        } else {
+                            $detectStatus.attr('class', 'loc-detect-status is-error').text("We found your area, but couldn't match it exactly — please choose it manually below.");
+                        }
+                    })
+                    .catch(function () {
+                        $detectStatus.attr('class', 'loc-detect-status is-error').text("We couldn't confirm your area. Please choose it manually.");
+                    });
+            },
+            function () {
+                $icon.removeClass('bi-arrow-repeat spin').addClass('bi-crosshair');
+                $detectStatus.attr('class', 'loc-detect-status is-error').text("We couldn't access your location. Please choose your area manually.");
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    });
+
+    $continueBtn.on('click', function () {
+        if (!canContinue()) return;
+
+        locState = { orderType: locOrderType, area: locSelectedArea };
+        safeWriteLocalStorage(LOC_STORAGE_KEY, locState);
+
+        userLocation = {
+            lat: locSelectedArea.lat,
+            lng: locSelectedArea.lng,
+            timestamp: new Date().toISOString()
+        };
+        safeWriteLocalStorage('brewBeansLocation', userLocation);
+
+        updateNavLocationDisplay();
+        locationModal.hide();
+    });
 
     $('#navLocationCard').on('click', function () {
+        populateFromState();
         locationModal.show();
     });
 
-    $('#allowLocation').on('click', function () {
-        locationModal.hide();
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function (position) {
-                    userLocation = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                        timestamp: new Date().toISOString()
-                    };
-                    safeWriteLocalStorage('brewBeansLocation', userLocation);
-                    showToast('Location saved successfully!');
-                },
-                function () {
-                    showToast('Could not access location. Please enter manually.', 'warning');
-                },
-                { enableHighAccuracy: true, timeout: 10000 }
-            );
-        } else {
-            showToast('Geolocation is not supported by your browser.', 'warning');
-        }
-    });
-
-    $('#denyLocation').on('click', function () {
-        showToast('You can enable location later from checkout.', 'info');
-    });
+    // First visit (no saved selection yet): show the modal shortly after
+    // the loading screen clears. Returning visitors: apply the saved
+    // pick silently and skip the modal entirely.
+    if (locState && locState.area) {
+        updateNavLocationDisplay();
+    } else {
+        setTimeout(function () {
+            populateFromState();
+            locationModal.show();
+        }, 2800);
+    }
 
     // ==========================================
     // NAVBAR SCROLL EFFECT + HERO PARALLAX
@@ -145,7 +424,7 @@ $(document).ready(function () {
     // ==========================================
     (function () {
         const $mainNav = $('#mainNav');
-        const $heroBg = $('.hero-bg');
+        const $heroBg = $('.hero-bg, .hero-bg-blur');
         let ticking = false;
 
         function onScrollFrame() {
@@ -215,8 +494,8 @@ $(document).ready(function () {
             startAutoplay();
         });
 
-        // Swipe navigation — the primary control on mobile, where the
-        // stacked layout leaves no room to overlay arrows/dots.
+        // Swipe navigation — a supplementary control alongside the arrows
+        // on touch devices (dots stay desktop/tablet-only, see CSS).
         let heroTouchStartX = 0;
         const $heroFrame = $('#heroFrame');
 

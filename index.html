@@ -6,11 +6,15 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
     <!-- SEO Meta Tags -->
-    <title>Brew Beans | Premium Artisan Coffee Shop in Karachi</title>
-    <meta name="description" content="Brew Beans - Experience handcrafted coffee, premium desserts, and unforgettable moments. Freshly brewed happiness in every cup. Dine-in, Drive-through & Delivery available in Karachi.">
-    <meta name="keywords" content="coffee shop, artisan coffee, espresso, cappuccino, latte, Karachi, premium coffee, desserts, frappes, brew beans">
+    <title>Brew Beans | Best Artisan Coffee Shop in Gulshan-e-Iqbal, Karachi</title>
+    <meta name="description" content="Brew Beans is Karachi's favorite artisan coffee shop in Gulshan-e-Iqbal — handcrafted coffee, lattes, frappes, cold brews & premium desserts. Order online for fast delivery or visit us for dine-in.">
+    <meta name="keywords" content="coffee shop Karachi, best coffee shop in Karachi, coffee shop Gulshan-e-Iqbal, artisan coffee Karachi, cafe near me, espresso, cappuccino, latte, iced coffee, cold brew, frappe, hot chocolate, premium desserts, coffee delivery Karachi, order coffee online Karachi, dine-in cafe Karachi, brew beans">
     <meta name="author" content="Brew Beans">
     <meta name="robots" content="index, follow">
+    <meta name="geo.region" content="PK-SD">
+    <meta name="geo.placename" content="Karachi">
+    <meta name="geo.position" content="24.9180;67.0971">
+    <meta name="ICBM" content="24.9180, 67.0971">
 
     <!-- Canonical URL -->
     <link rel="canonical" href="https://brewbeans.pk/">
@@ -18,18 +22,22 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://brewbeans.pk/">
-    <meta property="og:title" content="Brew Beans | Premium Artisan Coffee Shop">
-    <meta property="og:description" content="Experience handcrafted coffee, premium desserts, and unforgettable moments. Freshly brewed happiness in every cup.">
+    <meta property="og:title" content="Brew Beans | Best Artisan Coffee Shop in Gulshan-e-Iqbal, Karachi">
+    <meta property="og:description" content="Handcrafted coffee, lattes, frappes, cold brews & premium desserts in the heart of Karachi. Order online for delivery or visit us for dine-in — freshly brewed happiness in every cup.">
     <meta property="og:image" content="https://brewbeans.pk/img/b1.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Brew Beans Coffee Bar signature drinks">
     <meta property="og:site_name" content="Brew Beans">
     <meta property="og:locale" content="en_PK">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://brewbeans.pk/">
-    <meta property="twitter:title" content="Brew Beans | Premium Artisan Coffee Shop">
-    <meta property="twitter:description" content="Experience handcrafted coffee, premium desserts, and unforgettable moments. Freshly brewed happiness in every cup.">
+    <meta property="twitter:title" content="Brew Beans | Best Artisan Coffee Shop in Gulshan-e-Iqbal, Karachi">
+    <meta property="twitter:description" content="Handcrafted coffee, lattes, frappes, cold brews & premium desserts in the heart of Karachi. Order online for delivery or visit us for dine-in.">
     <meta property="twitter:image" content="https://brewbeans.pk/img/b1.png">
+    <meta property="twitter:image:alt" content="Brew Beans Coffee Bar signature drinks">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
@@ -97,7 +105,33 @@
         "servesCuisine": "Coffee, Desserts, Sandwiches",
         "acceptsReservations": true,
         "paymentAccepted": "Cash, Credit Card, Mobile Payment",
-        "currenciesAccepted": "PKR"
+        "currenciesAccepted": "PKR",
+        "menu": "https://brewbeans.pk/#menu",
+        "hasMap": "https://www.google.com/maps/search/?api=1&query=Brew+Beans+Karachi",
+        "sameAs": [
+            "https://www.facebook.com/brewbeanskhi/",
+            "https://www.instagram.com/brewbeans.karachi/"
+        ],
+        "review": [
+            {
+                "@type": "Review",
+                "author": { "@type": "Person", "name": "Shahzeb Aslam" },
+                "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+                "reviewBody": "Excellent coffee and a fantastic ambience. Cozy, welcoming, and the perfect spot to relax. Will definitely be coming back!"
+            },
+            {
+                "@type": "Review",
+                "author": { "@type": "Person", "name": "Mustafa Mushtaq" },
+                "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+                "reviewBody": "Just went out for a coffee and it turned out to be such a peaceful moment. The vibe was calm, the coffee tasted amazing, and everything felt so aesthetic and relaxing."
+            },
+            {
+                "@type": "Review",
+                "author": { "@type": "Person", "name": "Salman Ali" },
+                "reviewRating": { "@type": "Rating", "ratingValue": "5", "bestRating": "5" },
+                "reviewBody": "Amazing taste, best service and amazing owners."
+            }
+        ]
     }
     </script>
 </head>
@@ -111,24 +145,47 @@
         </div>
     </div>
 
-    <!-- Location Permission Modal -->
-    <div class="modal fade" id="locationModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content location-modal">
-                <div class="modal-body text-center p-5">
-                    <div class="location-icon mb-4">
-                        <i class="bi bi-geo-alt-fill"></i>
-                    </div>
-                    <h3 class="modal-title mb-3">Enable Location Services</h3>
-                    <p class="text-muted mb-4">Allow us to access your location for accurate delivery estimates, nearby store suggestions, and personalized service.</p>
-                    <div class="d-grid gap-3">
-                        <button type="button" class="btn btn-primary btn-lg" id="allowLocation">
-                            <i class="bi bi-geo-alt me-2"></i>Allow Location Access
+    <!-- Location Selection Modal -->
+    <div class="modal fade" id="locationModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true" aria-labelledby="locationModalTitle">
+        <div class="modal-dialog modal-dialog-centered loc-modal-dialog">
+            <div class="modal-content loc-modal">
+                <div class="loc-modal-header">
+                    <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" class="loc-modal-logo">
+                    <h2 class="loc-modal-title" id="locationModalTitle">Choose Your Delivery Location</h2>
+                    <p class="loc-modal-subtitle">Select your delivery area to view available products and estimated delivery time.</p>
+                </div>
+
+                <div class="loc-modal-body">
+                    <div class="loc-order-type" role="tablist" aria-label="Order type">
+                        <button type="button" class="loc-order-btn is-active" data-order-type="delivery" role="tab" aria-selected="true">
+                            <i class="bi bi-truck"></i> Delivery
                         </button>
-                        <button type="button" class="btn btn-outline-secondary" id="denyLocation" data-bs-dismiss="modal">
-                            Not Now
+                        <button type="button" class="loc-order-btn" data-order-type="pickup" role="tab" aria-selected="false">
+                            <i class="bi bi-shop"></i> Pickup
                         </button>
                     </div>
+
+                    <div class="loc-field" id="locAreaField">
+                        <label class="loc-field-label" for="locAreaInput">Delivery Area</label>
+                        <div class="loc-search">
+                            <i class="bi bi-search loc-search-icon"></i>
+                            <input type="text" class="loc-search-input" id="locAreaInput" placeholder="Search your area in Karachi..." autocomplete="off" aria-expanded="false" aria-controls="locAreaDropdown">
+                            <i class="bi bi-chevron-down loc-search-caret"></i>
+                            <div class="loc-dropdown" id="locAreaDropdown"></div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="loc-current-btn" id="locUseCurrentBtn">
+                        <i class="bi bi-crosshair"></i>
+                        <span>Use My Current Location</span>
+                    </button>
+                    <div class="loc-detect-status" id="locDetectStatus" aria-live="polite"></div>
+
+                    <div class="loc-availability" id="locAvailability" aria-live="polite"></div>
+                </div>
+
+                <div class="loc-modal-footer">
+                    <button type="button" class="loc-continue-btn" id="locContinueBtn" disabled>Continue</button>
                 </div>
             </div>
         </div>
@@ -141,8 +198,8 @@
                 <button type="button" class="nav-info-card nav-info-location" id="navLocationCard">
                     <span class="nav-info-icon"><i class="bi bi-geo-alt-fill"></i></span>
                     <span class="nav-info-text">
-                        <span class="nav-info-label">Delivery</span>
-                        <span class="nav-info-value">Karachi, Pakistan</span>
+                        <span class="nav-info-label" id="navLocationLabel">Delivery</span>
+                        <span class="nav-info-value" id="navLocationValue">Karachi, Pakistan</span>
                     </span>
                     <i class="bi bi-chevron-down nav-info-caret"></i>
                 </button>
@@ -290,6 +347,7 @@
                  so no competing title/subtitle overlay here, just a
                  CTA pinned clear of the artwork. -->
             <div class="hero-slide hero-slide-banner" data-slide-index="1">
+                <div class="hero-bg-blur" style="background-image:url('img/predict.jpg')"></div>
                 <div class="hero-bg" style="background-image:url('img/predict.jpg');background-position:center;"></div>
                 <div class="hero-overlay"></div>
                 <div class="hero-content">
@@ -308,6 +366,7 @@
                  so no competing title/subtitle overlay here, just a
                  CTA pinned clear of the artwork. -->
             <div class="hero-slide hero-slide-banner" data-slide-index="2">
+                <div class="hero-bg-blur" style="background-image:url('img/3rd carousel.jpg')"></div>
                 <div class="hero-bg" style="background-image:url('img/3rd carousel.jpg');background-position:center;"></div>
                 <div class="hero-overlay"></div>
                 <div class="hero-content">

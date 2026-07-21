@@ -1,3 +1,8 @@
 User-agent: *
 Disallow: /staff.html
+Disallow: /admin.html
+Disallow: /admin-dashboard.html
+Disallow: /order-tracking.html
 Allow: /
+
+Sitemap: https://brewbeans.pk/sitemap.xml
