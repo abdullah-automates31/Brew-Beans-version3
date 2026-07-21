@@ -31,6 +31,22 @@ $(document).ready(function () {
         }[ch]));
     }
 
+    // Wrap an <img> in a <picture> that offers a same-name .webp sibling
+    // to browsers that support it and falls back to the original file
+    // otherwise. Only locally hosted img/*.png|jpg get a webp source;
+    // externally hosted URLs (e.g. Unsplash) pass through untouched.
+    // CSS `picture{display:contents}` keeps the layout identical to a
+    // bare <img>, so callers can drop this in with no styling changes.
+    function pictureImg(src, alt, attrs) {
+        const imgTag = `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" ${attrs}>`;
+        if (!/^\.?\/?img\/.+\.(png|jpe?g)$/i.test(src)) return imgTag;
+        // encodeURI so spaces in filenames (e.g. "brew espresso.webp") don't
+        // get parsed as srcset candidate separators, which would silently
+        // break the webp source and fall back to the original file.
+        const webp = escapeHtml(encodeURI(src.replace(/\.(png|jpe?g)$/i, '.webp')));
+        return `<picture><source srcset="${webp}" type="image/webp">${imgTag}</picture>`;
+    }
+
     function sanitizeCartData(storedCart) {
         if (!Array.isArray(storedCart)) return [];
         return storedCart
@@ -685,7 +701,7 @@ $(document).ready(function () {
                     <div class="col-6 col-md-6 col-lg-3 motion-pop">
                         <div class="menu-item" data-id="${item.id}">
                             <div class="menu-item-img">
-                                <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">
+                                ${pictureImg(item.image, item.name, 'loading="lazy" width="600" height="600"')}
                                 <span class="menu-item-badge">${escapeHtml(item.category.replace('-', ' '))}</span>
                                 ${badgeHtml}
                             </div>
@@ -725,7 +741,7 @@ $(document).ready(function () {
         const html = featured.map(item => `
             <div class="fav-card" data-aos="fade-up">
                 <div class="fav-card-img">
-                    <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">
+                    ${pictureImg(item.image, item.name, 'loading="lazy" width="600" height="600"')}
                     <span class="fav-tag">⭐ Fan Favorite</span>
                 </div>
                 <div class="fav-card-body">
@@ -799,7 +815,7 @@ $(document).ready(function () {
             <div class="upsell-cards">
                 ${suggestions.map(item => `
                     <div class="upsell-card">
-                        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="upsell-img">
+                        ${pictureImg(item.image, item.name, 'class="upsell-img" loading="lazy"')}
                         <div class="upsell-info">
                             <div class="upsell-name">${escapeHtml(item.name)}</div>
                             <div class="upsell-price">Rs. ${item.price}</div>
