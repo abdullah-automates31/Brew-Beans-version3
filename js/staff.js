@@ -201,7 +201,7 @@ function renderOrders(animateOrderNumbers) {
                 ${order.notes ? `<div class="text-muted small mt-1"><i class="bi bi-chat-left-text me-1"></i>${escapeHtml(order.notes)}</div>` : ''}
                 <div class="d-flex justify-content-between mt-2">
                     <span>Total: <strong>Rs. ${order.total}</strong></span>
-                    <span class="text-muted">${escapeHtml(order.payment_method.toUpperCase())} • ${escapeHtml(order.payment_status)}</span>
+                    <span class="text-muted">${escapeHtml((order.payment_method || '').toUpperCase())} • ${escapeHtml(order.payment_status)}</span>
                 </div>
                 <div class="staff-status-actions">
                     ${order.status !== 'cancelled' && order.status !== 'delivered' ? actionsHtml : ''}

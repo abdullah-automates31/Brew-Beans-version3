@@ -36,6 +36,7 @@
   });
 
   async function init() {
+    document.getElementById('sidebarLogo')?.addEventListener('error', function () { this.style.display = 'none'; });
     checkShopStatus();
     await loadOrders();
     pollTimer = setInterval(loadOrders, 15000);
@@ -227,7 +228,7 @@
       const items = (o.order_items || []).map(i => `${i.quantity}x ${escHtml(i.menu_item_name)}`).join(', ');
       const nextStatus = STATUS_FLOW[o.status];
       const payClass = o.payment_method === 'cod' ? 'payment-cod' : (o.payment_status === 'paid' ? 'payment-paid' : 'payment-pending');
-      const payLabel = o.payment_method === 'cod' ? 'COD' : o.payment_method.toUpperCase();
+      const payLabel = o.payment_method === 'cod' ? 'COD' : (o.payment_method || '').toUpperCase();
       const isSelected = selectedOrderIds.has(o.order_number);
 
       return `
@@ -330,7 +331,7 @@
     document.getElementById('modalTitle').textContent = `Order #${o.order_number}`;
 
     const payClass = o.payment_method === 'cod' ? 'payment-cod' : (o.payment_status === 'paid' ? 'payment-paid' : 'payment-pending');
-    const payLabel = o.payment_method === 'cod' ? 'Cash on Delivery' : o.payment_method.toUpperCase();
+    const payLabel = o.payment_method === 'cod' ? 'Cash on Delivery' : (o.payment_method || '').toUpperCase();
     const items = o.order_items || [];
 
     document.getElementById('modalBody').innerHTML = `
@@ -1251,7 +1252,7 @@
     const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill'}"></i> ${msg}`;
+    toast.innerHTML = `<i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-circle-fill'}"></i> ${escHtml(msg)}`;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 3500);
   }

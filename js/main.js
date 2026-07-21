@@ -105,6 +105,10 @@ $(document).ready(function () {
         }
     }, 3000);
 
+    $('#navLocationCard').on('click', function () {
+        locationModal.show();
+    });
+
     $('#allowLocation').on('click', function () {
         locationModal.hide();
         if (navigator.geolocation) {
@@ -402,13 +406,13 @@ $(document).ready(function () {
                     <div class="col-12 col-md-6 col-lg-3 motion-pop">
                         <div class="menu-item" data-id="${item.id}">
                             <div class="menu-item-img">
-                                <img src="${item.image}" alt="${item.name}" loading="lazy">
-                                <span class="menu-item-badge">${item.category.replace('-', ' ')}</span>
+                                <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">
+                                <span class="menu-item-badge">${escapeHtml(item.category.replace('-', ' '))}</span>
                                 ${badgeHtml}
                             </div>
                             <div class="menu-item-content">
-                                <h3 class="menu-item-name">${item.name}</h3>
-                                <p class="menu-item-desc">${item.description}</p>
+                                <h3 class="menu-item-name">${escapeHtml(item.name)}</h3>
+                                <p class="menu-item-desc">${escapeHtml(item.description)}</p>
                                 <div class="menu-item-footer">
                                     <span class="menu-item-price">Rs. ${item.price}</span>
                                     <button class="btn-add-cart" data-id="${item.id}">
@@ -442,12 +446,12 @@ $(document).ready(function () {
         const html = featured.map(item => `
             <div class="fav-card" data-aos="fade-up">
                 <div class="fav-card-img">
-                    <img src="${item.image}" alt="${item.name}" loading="lazy">
+                    <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" loading="lazy">
                     <span class="fav-tag">⭐ Fan Favorite</span>
                 </div>
                 <div class="fav-card-body">
-                    <h4 class="fav-card-name">${item.name}</h4>
-                    <p class="fav-card-desc">${item.description}</p>
+                    <h4 class="fav-card-name">${escapeHtml(item.name)}</h4>
+                    <p class="fav-card-desc">${escapeHtml(item.description)}</p>
                     <div class="fav-card-footer">
                         <span class="fav-card-price">Rs. ${item.price}</span>
                         <button class="btn-fav-order btn-add-cart" data-id="${item.id}">
@@ -516,9 +520,9 @@ $(document).ready(function () {
             <div class="upsell-cards">
                 ${suggestions.map(item => `
                     <div class="upsell-card">
-                        <img src="${item.image}" alt="${item.name}" class="upsell-img">
+                        <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" class="upsell-img">
                         <div class="upsell-info">
-                            <div class="upsell-name">${item.name}</div>
+                            <div class="upsell-name">${escapeHtml(item.name)}</div>
                             <div class="upsell-price">Rs. ${item.price}</div>
                         </div>
                         <button class="upsell-add btn-add-cart" data-id="${item.id}" title="Add to cart">
@@ -1680,7 +1684,7 @@ $(document).ready(function () {
         const toast = $(`
             <div class="toast-notification">
                 <i class="bi ${icons[type] || icons.success}"></i>
-                <span>${message}</span>
+                <span>${escapeHtml(message)}</span>
             </div>
         `);
 

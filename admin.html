@@ -323,7 +323,7 @@
   <div class="login-card">
     <div class="login-header">
       <div class="logo-wrap">
-        <img src="img/brewbeans-logo.png" alt="Brew Beans" onerror="this.style.display='none'">
+        <img src="img/brewbeans-logo.png" alt="Brew Beans" id="loginLogo">
       </div>
       <div class="badge-admin">Admin Portal</div>
       <h1>Brew Beans</h1>
@@ -377,6 +377,8 @@
     const togglePassword = document.getElementById('togglePassword');
     const passwordInput  = document.getElementById('password');
     const eyeIcon        = document.getElementById('eyeIcon');
+
+    document.getElementById('loginLogo').addEventListener('error', function () { this.style.display = 'none'; });
 
     supabaseClient.auth.getSession().then(({ data }) => {
       if (data.session) window.location.href = 'admin-dashboard.html';

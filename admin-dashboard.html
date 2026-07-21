@@ -902,7 +902,7 @@
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      background: var(--surface);
+      background: var(--bg);
       border: 1.5px solid var(--border);
       border-radius: 10px;
       padding: 0.45rem 1rem;
@@ -911,17 +911,17 @@
       transition: border-color 0.2s;
     }
     .menu-search-wrap:focus-within { border-color: var(--secondary); }
-    .menu-search-icon { color: var(--text-muted); font-size: 0.9rem; }
+    .menu-search-icon { color: var(--text-light); font-size: 0.9rem; }
     .menu-search-input {
       border: none;
       outline: none;
       background: transparent;
       font-family: var(--font-primary);
       font-size: 0.875rem;
-      color: var(--text-primary);
+      color: var(--text-dark);
       width: 100%;
     }
-    .menu-search-input::placeholder { color: var(--text-muted); }
+    .menu-search-input::placeholder { color: var(--text-light); }
 
     .btn-add {
       padding: 0.5rem 1.1rem;
@@ -1388,7 +1388,7 @@
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sidebar-logo">
-    <img src="img/brewbeans-logo.png" alt="Brew Beans" onerror="this.style.display='none'">
+    <img src="img/brewbeans-logo.png" alt="Brew Beans" id="sidebarLogo">
     <div class="sidebar-logo-text">
       <h2>Brew Beans</h2>
       <span>Admin Portal</span>
