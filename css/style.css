@@ -2031,6 +2031,8 @@ html.bb-no-splash #loading-screen {
 }
 
 .map-container {
+    display: flex;
+    flex-direction: column;
     border-radius: var(--radius-lg);
     overflow: hidden;
     box-shadow: var(--shadow-lg);
@@ -2039,13 +2041,21 @@ html.bb-no-splash #loading-screen {
 }
 
 .map-container iframe {
-    border-radius: var(--radius-lg);
+    flex: 1 1 auto;
+    min-height: 0;
     filter: grayscale(20%);
     transition: var(--transition);
 }
 
 .map-container:hover iframe {
     filter: grayscale(0%);
+}
+
+.map-directions {
+    flex: 0 0 auto;
+    padding: 0.75rem;
+    text-align: center;
+    background: var(--accent);
 }
 
 .contact-form-card {
