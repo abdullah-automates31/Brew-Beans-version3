@@ -2600,6 +2600,28 @@ html.bb-no-splash #loading-screen {
         background-position: 25% top;
     }
 
+    /* Slides 2/3 are fully-designed graphics with their own headline
+       baked in (see hero-slide-banner above) — cover-sizing crops
+       their edges on narrow screens and cuts off words ("WIN",
+       "ARGENTINA"). contain guarantees the whole graphic, text
+       included, always stays fully visible; a plain white margin
+       reads as clean matting regardless of which slide's artwork
+       (cream marble vs. dark green) is showing. */
+    .hero-slide-banner .hero-bg {
+        background-size: contain;
+        background-position: center;
+        background-color: #fff;
+    }
+
+    /* These two slides have no HTML heading/subtitle competing for
+       contrast against the photo — just a bottom-pinned button that
+       already carries its own solid background — so the readability
+       scrim below (meant for slide 1's text-over-photo) would only
+       tint the fresh white letterbox margin above for no reason. */
+    .hero-slide-banner .hero-overlay {
+        display: none;
+    }
+
     /* Flipped from the desktop's left-to-right scrim: dark at the top
        where the heading/copy sit, fading out toward the bottom so the
        product photo reads clearly underneath the text, matching the
