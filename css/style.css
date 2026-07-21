@@ -2616,11 +2616,24 @@ html.bb-no-splash #loading-screen {
        "ARGENTINA"). contain guarantees the whole graphic, text
        included, always stays fully visible; a plain white margin
        reads as clean matting regardless of which slide's artwork
-       (cream marble vs. dark green) is showing. */
+       (cream marble vs. dark green) is showing.
+       bottom is reserved to match .hero-content's own box (32px top
+       pad + button + 56px bottom pad ≈ 138px) so the contained image
+       never shares that strip — without this the letterbox margin
+       shrinks or grows with the image's own aspect ratio and the
+       button ends up overlapping the artwork on some slides. */
     .hero-slide-banner .hero-bg {
+        bottom: 138px;
+        height: auto;
         background-size: contain;
         background-position: center;
         background-color: #fff;
+    }
+
+    /* Opaque so it reads as a dedicated footer bar sitting below the
+       image rather than a floating button overlapping it. */
+    .hero-slide-banner .hero-content {
+        background: #fff;
     }
 
     /* These two slides have no HTML heading/subtitle competing for
