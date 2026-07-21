@@ -90,6 +90,12 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: `${menuItem.name} is not available` }), { status: 400, headers: corsHeaders })
       }
 
+      // Quantity must be a positive integer — never trust the client not to send
+      // 0, a negative, or a fractional value that would corrupt the order total.
+      if (!Number.isInteger(item.quantity) || item.quantity < 1) {
+        return new Response(JSON.stringify({ error: `Invalid quantity for ${menuItem.name}` }), { status: 400, headers: corsHeaders })
+      }
+
       // Validate addon prices (trust the DB, not the client)
       let addonTotal = 0
       const validAddons: Addon[] = []
@@ -128,8 +134,14 @@ serve(async (req) => {
       })
     }
 
+    // Delivery charge is a client-supplied Haversine estimate — never trust it
+    // blindly. Reject non-finite or negative values that would deflate the total.
+    const rawDelivery = Number(body.p_delivery_charge)
+    if (!Number.isFinite(rawDelivery) || rawDelivery < 0) {
+      return new Response(JSON.stringify({ error: 'Invalid delivery charge' }), { status: 400, headers: corsHeaders })
+    }
     // Free delivery over Rs. 1000
-    const deliveryCharge = subtotal > 1000 ? 0 : body.p_delivery_charge
+    const deliveryCharge = subtotal > 1000 ? 0 : rawDelivery
 
     // Generate order number
     const now = new Date()
@@ -154,7 +166,9 @@ serve(async (req) => {
         delivery_charge: deliveryCharge,
         total: subtotal + deliveryCharge,
         status: 'placed',
-        payment_status: body.p_payment_method === 'cod' ? 'pending' : 'pending'
+        // Every order starts unpaid: COD is settled on delivery, online is
+        // settled after the gateway callback flips this to 'paid'.
+        payment_status: 'pending'
       })
       .select('id')
       .single()

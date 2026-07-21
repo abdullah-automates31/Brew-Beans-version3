@@ -1,5 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 interface ReqBody {
   order_number: string
   payment_method: string
@@ -8,15 +14,19 @@ interface ReqBody {
 }
 
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders })
   }
 
   try {
     const body: ReqBody = await req.json()
 
     if (!body.order_number || !body.payment_method || !body.amount || !body.return_url) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 })
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400, headers: corsHeaders })
     }
 
     if (body.payment_method === 'jazzcash') {
@@ -44,7 +54,7 @@ serve(async (req) => {
             ppmpf_5: '5'
           }
         }),
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -58,22 +68,22 @@ serve(async (req) => {
             orderId: body.order_number,
             amount: body.amount.toFixed(0),
             returnUrl: body.return_url,
-            transactionType: 'EAASYPAY'
+            transactionType: 'EASYPAY'
           }
         }),
-        { headers: { 'Content-Type': 'application/json' } }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     return new Response(
       JSON.stringify({ configured: false, message: 'Unsupported payment method' }),
-      { headers: { 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
     console.error('create-payment error:', err)
     return new Response(
       JSON.stringify({ configured: false, error: err.message || 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
