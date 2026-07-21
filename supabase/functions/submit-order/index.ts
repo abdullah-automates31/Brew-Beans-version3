@@ -1,6 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
 interface Addon {
   name: string
   price: number
@@ -26,8 +32,12 @@ interface ReqBody {
 }
 
 serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders })
   }
 
   try {
@@ -35,10 +45,10 @@ serve(async (req) => {
 
     // Validate required fields
     if (!body.p_customer_name || !body.p_phone || !body.p_address) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400 })
+      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400, headers: corsHeaders })
     }
     if (!body.p_items || body.p_items.length === 0) {
-      return new Response(JSON.stringify({ error: 'Cart is empty' }), { status: 400 })
+      return new Response(JSON.stringify({ error: 'Cart is empty' }), { status: 400, headers: corsHeaders })
     }
 
     const supabase = createClient(
@@ -55,7 +65,7 @@ serve(async (req) => {
 
     if (menuError) throw menuError
     if (!menuItems || menuItems.length === 0) {
-      return new Response(JSON.stringify({ error: 'No valid menu items found' }), { status: 400 })
+      return new Response(JSON.stringify({ error: 'No valid menu items found' }), { status: 400, headers: corsHeaders })
     }
 
     const menuMap = new Map(menuItems.map(m => [m.id, m]))
@@ -74,10 +84,10 @@ serve(async (req) => {
     for (const item of body.p_items) {
       const menuItem = menuMap.get(item.menu_item_id)
       if (!menuItem) {
-        return new Response(JSON.stringify({ error: `Menu item ${item.menu_item_id} not found` }), { status: 400 })
+        return new Response(JSON.stringify({ error: `Menu item ${item.menu_item_id} not found` }), { status: 400, headers: corsHeaders })
       }
       if (!menuItem.is_available) {
-        return new Response(JSON.stringify({ error: `${menuItem.name} is not available` }), { status: 400 })
+        return new Response(JSON.stringify({ error: `${menuItem.name} is not available` }), { status: 400, headers: corsHeaders })
       }
 
       // Validate addon prices (trust the DB, not the client)
@@ -191,13 +201,13 @@ serve(async (req) => {
         delivery_charge: deliveryCharge,
         total: subtotal + deliveryCharge
       }),
-      { headers: { 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
     console.error('submit-order error:', err)
     return new Response(
       JSON.stringify({ error: err.message || 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
