@@ -79,6 +79,14 @@ img {
     display: block;
 }
 
+/* <picture> is used purely as a WebP-with-fallback wrapper around
+   existing <img>s. display:contents removes the wrapper from the box
+   tree so the inner <img> keeps behaving exactly as before (same flex/
+   grid child, same selectors) — zero layout impact. */
+picture {
+    display: contents;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
@@ -926,9 +934,34 @@ html.bb-no-splash #loading-screen {
     left: 0;
     width: 100%;
     height: 120%;
-    background: url('../img/bg.png') 62% center/cover no-repeat;
+    background-position: 62% center;
+    background-size: cover;
+    background-repeat: no-repeat;
     filter: brightness(1.08) saturate(1.06) contrast(1.02);
     will-change: transform;
+}
+
+/* Per-slide background images. Each declares a plain JPEG url() first,
+   then an image-set() that serves WebP to browsers that support it and
+   the same JPEG to those that don't — browsers that don't understand
+   image-set() at all simply keep the url() line above. No slide ever
+   ends up without an image. (Moved out of inline styles so the WebP
+   fallback chain lives in one place; visuals are unchanged.) */
+.hero-bg--s1 {
+    background-image: url('../img/bg-2.jpg');
+    background-image: image-set(url('../img/bg-2.webp') type('image/webp'), url('../img/bg-2.jpg') type('image/jpeg'));
+}
+
+.hero-bg--s2 {
+    background-position: center;
+    background-image: url('../img/predict.jpg');
+    background-image: image-set(url('../img/predict.webp') type('image/webp'), url('../img/predict.jpg') type('image/jpeg'));
+}
+
+.hero-bg--s3 {
+    background-position: center;
+    background-image: url('../img/3rd carousel.jpg');
+    background-image: image-set(url('../img/3rd carousel.webp') type('image/webp'), url('../img/3rd carousel.jpg') type('image/jpeg'));
 }
 
 /* Kept intentionally light — just enough contrast for the white

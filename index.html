@@ -43,7 +43,7 @@
     <link rel="preconnect" href="https://images.unsplash.com">
 
     <!-- Hero background is the LCP element on this page — preload it -->
-    <link rel="preload" as="image" href="img/bg-2.jpg" fetchpriority="high">
+    <link rel="preload" as="image" href="img/bg-2.webp" type="image/webp" fetchpriority="high">
     <link rel="preload" as="image" href="img/brewbeans-logo.png" fetchpriority="high">
 
     <!-- Fonts -->
@@ -106,7 +106,7 @@
     <!-- Loading Screen -->
     <div id="loading-screen">
         <div class="loading-content">
-            <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" class="loading-logo">
+            <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" class="loading-logo" width="872" height="439">
             <p class="loading-subtext">Brewing something special...</p>
         </div>
     </div>
@@ -239,7 +239,7 @@
 
             <!-- Slide 1: Brand intro -->
             <div class="hero-slide is-active" data-slide-index="0">
-                <div class="hero-bg" style="background-image:url('img/bg-2.jpg')"></div>
+                <div class="hero-bg hero-bg--s1"></div>
                 <div class="hero-overlay"></div>
                 <div class="hero-content">
                     <div class="hero-inner" data-aos="fade-up" data-aos-duration="1200">
@@ -290,7 +290,7 @@
                  so no competing title/subtitle overlay here, just a
                  CTA pinned clear of the artwork. -->
             <div class="hero-slide hero-slide-banner" data-slide-index="1">
-                <div class="hero-bg" style="background-image:url('img/predict.jpg');background-position:center;"></div>
+                <div class="hero-bg hero-bg--s2"></div>
                 <div class="hero-overlay"></div>
                 <div class="hero-content">
                     <div class="hero-inner">
@@ -308,7 +308,7 @@
                  so no competing title/subtitle overlay here, just a
                  CTA pinned clear of the artwork. -->
             <div class="hero-slide hero-slide-banner" data-slide-index="2">
-                <div class="hero-bg" style="background-image:url('img/3rd carousel.jpg');background-position:center;"></div>
+                <div class="hero-bg hero-bg--s3"></div>
                 <div class="hero-overlay"></div>
                 <div class="hero-content">
                     <div class="hero-inner">
@@ -343,10 +343,10 @@
                 <div class="col-lg-6" data-aos="fade-right">
                     <div class="about-images">
                         <div class="about-img-main">
-                            <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&h=700&fit=crop" alt="Brew Beans Coffee Shop Interior" loading="lazy">
+                            <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=600&h=700&fit=crop" alt="Brew Beans Coffee Shop Interior" loading="lazy" width="600" height="700">
                         </div>
                         <div class="about-img-float">
-                            <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=300&h=300&fit=crop" alt="Coffee Art" loading="lazy">
+                            <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=300&h=300&fit=crop" alt="Coffee Art" loading="lazy" width="300" height="300">
                         </div>
                         <div class="experience-badge">
                             <span class="exp-number">8+</span>
@@ -566,49 +566,52 @@
             </div>
             <div class="gallery-grid mt-2">
                 <div class="gallery-item gallery-item-1" data-aos="fade-right" data-aos-delay="0">
-                    <img src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop" alt="Coffee Brewing" loading="lazy">
+                    <img src="https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=400&fit=crop" alt="Coffee Brewing" loading="lazy" width="400" height="400">
                     <div class="gallery-overlay">
                         <i class="bi bi-zoom-in"></i>
                     </div>
                 </div>
                 <div class="gallery-item gallery-item-2" data-aos="fade-left" data-aos-delay="50">
-                    <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop" alt="Latte Art" loading="lazy">
+                    <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop" alt="Latte Art" loading="lazy" width="400" height="400">
                     <div class="gallery-overlay">
                         <i class="bi bi-zoom-in"></i>
                     </div>
                 </div>
                 <div class="gallery-item gallery-item-3" data-aos="fade-right" data-aos-delay="90">
-                    <img src="https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&h=400&fit=crop" alt="Coffee Shop" loading="lazy">
+                    <img src="https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=400&h=400&fit=crop" alt="Coffee Shop" loading="lazy" width="400" height="400">
                     <div class="gallery-overlay">
                         <i class="bi bi-zoom-in"></i>
                     </div>
                 </div>
                 <div class="gallery-item gallery-item-4" data-aos="fade-left" data-aos-delay="130">
-                    <img src="https://images.unsplash.com/photo-1481833761820-0509d3217039?w=400&h=400&fit=crop" alt="Cafe Interior" loading="lazy">
+                    <img src="https://images.unsplash.com/photo-1481833761820-0509d3217039?w=400&h=400&fit=crop" alt="Cafe Interior" loading="lazy" width="400" height="400">
                     <div class="gallery-overlay">
                         <i class="bi bi-zoom-in"></i>
                     </div>
                 </div>
                 <div class="gallery-item gallery-item-5" data-aos="fade-right" data-aos-delay="170">
-                    <img src="./img/b1.png" alt="Coffee Beans" loading="lazy">
+                    <picture>
+                        <source srcset="./img/b1.webp" type="image/webp">
+                        <img src="./img/b1.png" alt="Coffee Beans" loading="lazy" width="617" height="693">
+                    </picture>
                     <div class="gallery-overlay">
                         <i class="bi bi-zoom-in"></i>
                     </div>
                 </div>
                 <div class="gallery-item gallery-item-6" data-aos="fade-left" data-aos-delay="210">
-                    <img src="https://images.unsplash.com/photo-1568051243858-533a607809a5?w=400&h=400&fit=crop" alt="Pastries" loading="lazy">
+                    <img src="https://images.unsplash.com/photo-1568051243858-533a607809a5?w=400&h=400&fit=crop" alt="Pastries" loading="lazy" width="400" height="400">
                     <div class="gallery-overlay">
                         <i class="bi bi-zoom-in"></i>
                     </div>
                 </div>
                 <div class="gallery-item gallery-item-7" data-aos="fade-right" data-aos-delay="250">
-                    <img src="https://images.unsplash.com/photo-1522992319-0365e5f11656?w=400&h=400&fit=crop" alt="Espresso Machine" loading="lazy">
+                    <img src="https://images.unsplash.com/photo-1522992319-0365e5f11656?w=400&h=400&fit=crop" alt="Espresso Machine" loading="lazy" width="400" height="400">
                     <div class="gallery-overlay">
                         <i class="bi bi-zoom-in"></i>
                     </div>
                 </div>
                 <div class="gallery-item gallery-item-8" data-aos="fade-left" data-aos-delay="290">
-                    <img src="https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop" alt="Coffee Cup" loading="lazy">
+                    <img src="https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=400&fit=crop" alt="Coffee Cup" loading="lazy" width="400" height="400">
                     <div class="gallery-overlay">
                         <i class="bi bi-zoom-in"></i>
                     </div>
@@ -824,7 +827,7 @@
                     <div class="col-lg-4 col-md-6">
                         <div class="footer-brand">
                             <a class="navbar-brand mb-3" href="#home">
-                                <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" class="brand-logo">
+                                <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" class="brand-logo" width="872" height="439">
                             </a>
                             <p class="footer-text">Crafting moments of joy through exceptional coffee and warm hospitality since 2018. Your daily dose of happiness.</p>
                             <div class="footer-social">
