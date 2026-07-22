@@ -32,13 +32,23 @@
     body {
       font-family: 'Poppins', sans-serif;
       background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 55%, var(--primary-light) 100%);
+      background-attachment: fixed;
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
-      align-items: center;
       justify-content: center;
       padding: 1.5rem;
-      overflow: hidden;
+      /* Was `overflow: hidden`, which is fine until the card is taller
+         than the viewport — on a short screen the Sign In button ended up
+         below the fold with no way to scroll to it. Only the horizontal
+         axis needs clamping, and that is just for the decorative orbs. */
+      overflow-x: hidden;
     }
+
+    /* margin:auto rather than align-items:center. Centring a flex item
+       that overflows its container clips the top and makes it
+       unreachable; auto margins centre it while still letting it scroll. */
+    .login-card { margin: auto; }
 
     /* ── Animated background orbs ── */
     .orb {
@@ -215,6 +225,8 @@
     .form-control {
       width: 100%;
       padding: 0.78rem 1rem 0.78rem 2.6rem;
+      /* 16px, so iOS does not zoom the page in when the field is focused. */
+      font-size: 16px;
       border: 1.5px solid var(--border);
       border-radius: var(--radius);
       font-family: 'Poppins', sans-serif;
@@ -230,20 +242,40 @@
       box-shadow: 0 0 0 3.5px rgba(46,139,87,0.12);
     }
 
+    /* The password field needs room for the toggle, otherwise long values
+       run underneath it. */
+    #password { padding-right: 3.2rem; }
+
+    /* Was an 18px icon with 2px of padding — a tap target well under the
+       44px minimum, so on a phone the tap usually missed it entirely and
+       the button looked broken. */
     .toggle-password {
       position: absolute;
-      right: 13px;
+      right: 8px;
       top: 50%;
       transform: translateY(-50%);
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       background: none;
       border: none;
+      border-radius: 50%;
       cursor: pointer;
       color: var(--text-light);
-      font-size: 0.95rem;
-      transition: color 0.2s;
-      padding: 2px;
+      font-size: 1rem;
+      transition: color 0.2s, background 0.2s;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
     }
-    .toggle-password:hover { color: var(--secondary); }
+    .toggle-password:hover { color: var(--secondary); background: rgba(46,139,87,0.08); }
+    .toggle-password:active { background: rgba(46,139,87,0.16); }
+    .toggle-password:focus-visible {
+      outline: 2px solid var(--secondary);
+      outline-offset: 2px;
+      color: var(--secondary);
+    }
 
     /* ── Sign In button ── */
     .btn-login {
@@ -310,6 +342,32 @@
       transition: color 0.2s, gap 0.2s;
     }
     .login-footer a:hover { color: var(--primary); gap: 0.55rem; }
+
+    /* ── Small screens ── */
+    @media (max-width: 420px) {
+      body { padding: 0.75rem; }
+      .login-header { padding: 1.75rem 1.25rem 2.5rem; }
+      .login-header h1 { font-size: 1.45rem; }
+      .logo-wrap img { width: 50px; height: 50px; }
+      .login-body { padding: 1.25rem 1.25rem 1.5rem; }
+      .login-footer { padding: 0.8rem 1.25rem 1.2rem; }
+      /* Decorative only, and they cost paint on the devices least able
+         to spare it. */
+      .orb { display: none; }
+    }
+
+    /* Landscape phones: the card is taller than the viewport, so the
+       animations that translate it just make the scroll jump. */
+    @media (max-height: 560px) {
+      body { align-items: flex-start; padding-top: 1rem; padding-bottom: 1rem; }
+      .logo-wrap img { animation: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .orb, .logo-wrap img { animation: none; }
+      .login-card, .badge-admin, .login-header h1, .login-header p,
+      .form-group, .btn-login, .login-footer { animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -350,8 +408,8 @@
           <div class="input-wrapper">
             <i class="bi bi-lock icon-left"></i>
             <input type="password" id="password" class="form-control" placeholder="Enter your password" required autocomplete="current-password">
-            <button type="button" class="toggle-password" id="togglePassword">
-              <i class="bi bi-eye" id="eyeIcon"></i>
+            <button type="button" class="toggle-password" id="togglePassword" aria-label="Show password" aria-pressed="false" aria-controls="password">
+              <i class="bi bi-eye" id="eyeIcon" aria-hidden="true"></i>
             </button>
           </div>
         </div>
@@ -385,9 +443,16 @@
     });
 
     togglePassword.addEventListener('click', () => {
-      const isPass = passwordInput.type === 'password';
-      passwordInput.type = isPass ? 'text' : 'password';
-      eyeIcon.className  = isPass ? 'bi bi-eye-slash' : 'bi bi-eye';
+      const willShow = passwordInput.type === 'password';
+      passwordInput.type = willShow ? 'text' : 'password';
+      eyeIcon.className = willShow ? 'bi bi-eye-slash' : 'bi bi-eye';
+      togglePassword.setAttribute('aria-pressed', String(willShow));
+      togglePassword.setAttribute('aria-label', willShow ? 'Hide password' : 'Show password');
+      // Toggling type moves the caret to the start in some browsers, so
+      // put it back where it was.
+      const pos = passwordInput.value.length;
+      passwordInput.focus();
+      passwordInput.setSelectionRange(pos, pos);
     });
 
     loginForm.addEventListener('submit', async (e) => {
