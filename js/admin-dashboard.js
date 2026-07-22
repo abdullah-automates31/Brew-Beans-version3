@@ -19,20 +19,42 @@
   let revenueChartInstance = null;
 
   // ── AUTH CHECK ──
-  Promise.race([
-    supabaseClient.auth.getSession(),
-    new Promise(resolve => setTimeout(() => resolve({ data: { session: null }, _timeout: true }), 8000))
-  ]).then(({ data, _timeout }) => {
-    if (_timeout || !data.session) {
-      setTimeout(() => { window.location.href = 'admin.html'; }, 500);
-      return;
-    }
-    const email = data.session.user.email;
+  // The page ships with `auth-pending` on <body>, which hides the entire
+  // shell from the first painted frame. Only a verified session takes it
+  // off. Previously the dashboard rendered immediately and an
+  // unauthenticated visitor got a 500ms look at it before the redirect.
+
+  // replace(), not href: a bounced visitor pressing Back should not land
+  // on the gated page again.
+  function redirectToLogin() {
+    window.location.replace('admin.html');
+  }
+
+  function revealDashboard(session) {
+    const email = session.user.email;
     document.getElementById('userEmail').textContent = email;
     document.getElementById('userAvatar').textContent = email[0].toUpperCase();
+    document.body.classList.remove('auth-pending');
     init();
-  }).catch(() => {
-    setTimeout(() => { window.location.href = 'admin.html'; }, 500);
+  }
+
+  Promise.race([
+    supabaseClient.auth.getSession(),
+    // A hung network must not leave the gate up forever; treat it as no
+    // session, which sends the visitor to the login page.
+    new Promise(resolve => setTimeout(() => resolve({ data: { session: null }, _timeout: true }), 8000))
+  ]).then(({ data, _timeout }) => {
+    if (_timeout || !data || !data.session) { redirectToLogin(); return; }
+    revealDashboard(data.session);
+  }).catch(redirectToLogin);
+
+  // Signing out in another tab, or a refresh token that stops being
+  // valid, must not leave this tab sitting on a live dashboard.
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT' || (!session && event !== 'INITIAL_SESSION')) {
+      document.body.classList.add('auth-pending');
+      redirectToLogin();
+    }
   });
 
   async function init() {
@@ -356,6 +378,7 @@
 
       <div class="modal-section">
         <div class="modal-section-title">Order Items</div>
+        <div class="table-scroll">
         <table class="modal-items-table">
           <thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
           <tbody>
@@ -368,6 +391,7 @@
               </tr>`).join('')}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div class="modal-section">
@@ -507,8 +531,11 @@
 
   // ── LOGOUT ──
   async function logout() {
+    // Re-gate first, so the dashboard is not left on screen while the
+    // sign-out request is in flight.
+    document.body.classList.add('auth-pending');
     await supabaseClient.auth.signOut();
-    window.location.href = 'admin.html';
+    redirectToLogin();
   }
 
   // ── HELPERS ──
@@ -971,6 +998,7 @@
     }
 
     el.innerHTML = `
+      <div class="table-scroll">
       <table class="inv-table">
         <thead>
           <tr>
@@ -1002,7 +1030,8 @@
             </tr>`;
           }).join('')}
         </tbody>
-      </table>`;
+      </table>
+      </div>`;
   }
 
   function findIngredient(id) {
@@ -1456,6 +1485,7 @@
       return;
     }
     el.innerHTML = `
+      <div class="table-scroll">
       <table style="width:100%;border-collapse:collapse">
         <thead>
           <tr style="border-bottom:1px solid var(--border-light);text-align:left">
@@ -1479,7 +1509,8 @@
               </td>
             </tr>`).join('')}
         </tbody>
-      </table>`;
+      </table>
+      </div>`;
 
     document.querySelectorAll('.pin-display').forEach(el => {
       el.addEventListener('click', function() {

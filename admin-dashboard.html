@@ -62,6 +62,20 @@
 
     img, table { max-width: 100%; }
 
+    /* Long unbroken strings — order numbers, emails, pasted URLs — are
+       the other way a page ends up wider than the screen. */
+    .content, .card, td, th, p, h1, h2, h3, h4, h5 { overflow-wrap: anywhere; }
+
+    /* A wide table scrolls inside its own box rather than pushing the
+       page sideways. .card is overflow:hidden, so without this the
+       right-hand columns were simply clipped and unreachable. */
+    .table-scroll {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
     /* ── SIDEBAR ── */
     .sidebar {
       width: var(--sidebar-width);
@@ -1393,6 +1407,64 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
+    /* ── AUTH GATE ──
+       Fails closed. The shell is hidden by a rule that is active from the
+       first painted frame, and only script that has seen a real session
+       removes `auth-pending`. If admin-dashboard.js never runs — blocked,
+       404, syntax error — nothing protected is ever painted, which is the
+       safe direction for a failure to go. */
+    body.auth-pending .sidebar,
+    body.auth-pending .sidebar-backdrop,
+    body.auth-pending .main,
+    body.auth-pending .toast-container,
+    body.auth-pending .modal-overlay,
+    body.auth-pending .confirm-overlay {
+      visibility: hidden !important;
+    }
+
+    body.auth-pending { overflow: hidden; }
+
+    .auth-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.15rem;
+      background: var(--primary);
+      color: rgba(255,255,255,0.85);
+    }
+
+    body:not(.auth-pending) .auth-gate { display: none; }
+
+    .auth-gate img {
+      width: 96px;
+      height: auto;
+      opacity: 0.95;
+    }
+
+    .auth-gate-spinner {
+      width: 30px;
+      height: 30px;
+      border: 3px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: authGateSpin 0.8s linear infinite;
+    }
+
+    @keyframes authGateSpin { to { transform: rotate(360deg); } }
+
+    .auth-gate p {
+      font-size: 0.875rem;
+      letter-spacing: 0.01em;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .auth-gate-spinner { animation-duration: 2s; }
+    }
+
     /* ── MOBILE LAYOUT ──
        Below 1024px the sidebar leaves the flow entirely and slides over
        the content. Before this, it was position:fixed at 260px with the
@@ -2047,8 +2119,16 @@
     }
   </style>
 </head>
-<body>
+<body class="auth-pending">
 
+<!-- Auth gate. Present in the initial HTML so it paints on the first
+     frame — a JS-inserted overlay would arrive after the dashboard had
+     already been shown. -->
+<div class="auth-gate" id="authGate" role="status" aria-live="polite">
+  <img src="img/brewbeans-logo.png" alt="Brew Beans">
+  <div class="auth-gate-spinner"></div>
+  <p>Checking your session…</p>
+</div>
 
 <!-- Toast Container -->
 <div class="toast-container" id="toastContainer"></div>
