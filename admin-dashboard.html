@@ -63,8 +63,11 @@
     img, table { max-width: 100%; }
 
     /* Long unbroken strings — order numbers, emails, pasted URLs — are
-       the other way a page ends up wider than the screen. */
-    .content, .card, td, th, p, h1, h2, h3, h4, h5 { overflow-wrap: anywhere; }
+       the other way a page ends up wider than the screen.
+       break-word, NOT anywhere: `anywhere` also shrinks an element's
+       min-content width to a single character, so flex children collapse
+       and ordinary labels like "Open" wrap one letter per line. */
+    .content, .card, td, th, p, h1, h2, h3, h4, h5 { overflow-wrap: break-word; }
 
     /* A wide table scrolls inside its own box rather than pushing the
        page sideways. .card is overflow:hidden, so without this the
@@ -1334,15 +1337,22 @@
     }
     .order-card.selected-order { border-color: var(--secondary); background: #f0faf4; }
 
+    /* Hidden by translating its own height out of view, not by a fixed
+       bottom:-80px — that only ever hid an 80px-tall bar, so anything
+       that made it taller (a wrapped label, a narrow screen) left part
+       of it stranded on screen. */
     .bulk-action-bar {
-      position: fixed; bottom: -80px; left: 260px; right: 0;
+      position: fixed; bottom: 0; left: var(--sidebar-width); right: 0;
       background: var(--primary); color: white;
       display: flex; align-items: center; gap: 0.75rem;
+      flex-wrap: wrap;
       padding: 0.85rem 2rem; z-index: 500;
       box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-      transition: bottom 0.3s ease;
+      transform: translateY(110%);
+      visibility: hidden;
+      transition: transform 0.3s ease, visibility 0.3s;
     }
-    .bulk-action-bar.visible { bottom: 0; }
+    .bulk-action-bar.visible { transform: translateY(0); visibility: visible; }
     .bulk-action-bar .bulk-count { font-size: 0.9rem; font-weight: 600; margin-right: auto; }
     .btn-bulk-action {
       padding: 0.45rem 1rem; border-radius: 8px; border: none;
@@ -1523,6 +1533,10 @@
       }
 
       .main { margin-left: 0; width: 100%; }
+
+      /* Was hardcoded to the desktop sidebar width, leaving a 260px gap
+         on a phone where the sidebar is off-canvas. */
+      .bulk-action-bar { left: 0; padding: 0.75rem 1rem; }
 
       .topbar { padding: 0.85rem 1rem; }
       .topbar-title h1 { font-size: 1.05rem; }
