@@ -49,6 +49,12 @@ Bootstrap JS → jQuery 3.7.1 → AOS 2.3.4 → Supabase JS v2 → `supabase-con
 
 **Menu data** lives in `js/main.js` as a hardcoded `menuItems` array (16 products with id, name, category, description, price, image). Changes to the menu require editing this array. The `menu-seed.sql` file can reseed the `menu_items` DB table if needed.
 
+**Shop settings** (name, logo, phone, WhatsApp, email, address, Google Maps link, social URLs, tax %, currency) live in the single-row `shop_settings` table, edited under Settings in the admin portal. Run `shop-settings.sql` once to create the table, its RLS policies and the public `shop-assets` storage bucket used for logo uploads.
+
+`index.html` keeps the real values hardcoded in the markup and overwrites them at runtime from the DB, so crawlers and a failed fetch both still get a complete page. Elements opt in via `data-shop-*` attributes (`-text`, `-href`, `-src`, `-alt`, `-tel`, `-mailto`, `-whatsapp`, `-social`, `-phone-text`) handled by `applyShopSettings()` in `js/main.js` — wiring a new field is a markup change, not a JS one. A `data-shop-social` element hides itself when its URL is empty. **Uploaded logos are served from Supabase Storage, so that origin must stay in the CSP `img-src`.**
+
+`tax_percent` is stored and editable but is **not yet applied to order totals** — totals are recomputed server-side in `submit-order`, which is the only place a tax line may be added.
+
 **Addon system** is entirely DB-driven (not hardcoded). Addon groups (`addon_groups`), options (`addons`), and their assignment to menu items (`menu_item_addon_groups`) are fetched live from Supabase. The `submit-order` Edge Function re-validates addon prices from the DB — client-side prices for addons are ignored.
 
 **Cart state** is persisted in `localStorage` (`brewBeansCart` key) with sanitization on read. The cart object stores items keyed by product id.
@@ -96,6 +102,7 @@ Bootstrap JS → jQuery 3.7.1 → AOS 2.3.4 → Supabase JS v2 → `supabase-con
 | `order_item_addons` | Addon selections per line item (addon_name, addon_price snapshots) |
 | `staff_pins` | Staff PINs (name, pin 4–6 digits, is_active) |
 | `business_hours` | Open/close times per day of week, is_closed flag |
+| `shop_settings` | Single row (`id = 1`): shop name, logo, contact details, maps link, social URLs, tax %, currency. Public read, authenticated write. |
 
 ## CSS
 

@@ -479,6 +479,7 @@
     addons:    ['Add-ons', 'Manage addon groups and options'],
     staff:     ['Staff PINs', 'Manage staff access'],
     analytics: ['Analytics', 'Sales overview and insights'],
+    settings:  ['Settings', 'Shop details shown across the website'],
   };
 
   function showPage(page) {
@@ -499,6 +500,7 @@
     if (page === 'addons') loadAddonGroups();
     if (page === 'staff') loadStaff();
     if (page === 'analytics') loadAnalytics();
+    if (page === 'settings') loadSettings();
   }
 
   // ── LOGOUT ──
@@ -768,6 +770,138 @@
     const row = document.getElementById('hours-row-' + day);
     if (isClosed) row.classList.add('is-closed');
     else row.classList.remove('is-closed');
+  }
+
+  // ── SHOP SETTINGS ──
+  // Single row, id = 1 (see shop-settings.sql). Every field maps to one
+  // input, so load/save are just two passes over the same map.
+  const SETTINGS_FIELDS = {
+    shop_name:       'setShopName',
+    logo_url:        'setLogoUrl',
+    phone:           'setPhone',
+    whatsapp:        'setWhatsapp',
+    email:           'setEmail',
+    address:         'setAddress',
+    maps_link:       'setMapsLink',
+    facebook_url:    'setFacebook',
+    instagram_url:   'setInstagram',
+    tiktok_url:      'setTiktok',
+    youtube_url:     'setYoutube',
+    tax_percent:     'setTax',
+    currency_code:   'setCurrencyCode',
+    currency_symbol: 'setCurrencySymbol',
+  };
+
+  const LOGO_BUCKET = 'shop-assets';
+  const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+  async function loadSettings() {
+    const { data, error } = await supabaseClient
+      .from('shop_settings').select('*').eq('id', 1).maybeSingle();
+
+    if (error || !data) {
+      showToast('Failed to load settings', 'error');
+      return;
+    }
+
+    Object.entries(SETTINGS_FIELDS).forEach(([column, inputId]) => {
+      const el = document.getElementById(inputId);
+      if (el) el.value = data[column] == null ? '' : data[column];
+    });
+    updateLogoPreview(data.logo_url);
+  }
+
+  function updateLogoPreview(url) {
+    const img = document.getElementById('setLogoPreview');
+    if (!img) return;
+    img.src = url || 'img/brewbeans-logo.png';
+    img.onerror = () => { img.src = 'img/brewbeans-logo.png'; };
+  }
+
+  document.getElementById('setLogoUrl')?.addEventListener('input', function () {
+    updateLogoPreview(this.value.trim());
+  });
+
+  async function uploadLogo(file) {
+    if (file.size > LOGO_MAX_BYTES) {
+      showToast('Logo must be under 2 MB', 'error');
+      return null;
+    }
+
+    // Timestamped name so the CDN serves the new file instead of a
+    // cached copy of the old one under the same path.
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+    const path = `logo-${Date.now()}.${ext}`;
+
+    const { error } = await supabaseClient.storage
+      .from(LOGO_BUCKET)
+      .upload(path, file, { cacheControl: '3600', upsert: false });
+
+    if (error) {
+      // Almost always a missing bucket or policy — say which, the
+      // generic storage message is not actionable.
+      showToast(`Upload failed: ${error.message}. Has shop-settings.sql been run?`, 'error');
+      return null;
+    }
+
+    const { data } = supabaseClient.storage.from(LOGO_BUCKET).getPublicUrl(path);
+    return data ? data.publicUrl : null;
+  }
+
+  document.getElementById('setLogoFile')?.addEventListener('change', async function () {
+    const file = this.files && this.files[0];
+    if (!file) return;
+
+    const btn = document.getElementById('saveSettingsBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+
+    const url = await uploadLogo(file);
+
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+    this.value = ''; // let the same file be picked again after a failure
+
+    if (!url) return;
+    document.getElementById('setLogoUrl').value = url;
+    updateLogoPreview(url);
+    showToast('Logo uploaded — press Save Changes to apply it', 'success');
+  });
+
+  async function saveSettings() {
+    const btn = document.getElementById('saveSettingsBtn');
+    const payload = {};
+
+    Object.entries(SETTINGS_FIELDS).forEach(([column, inputId]) => {
+      const el = document.getElementById(inputId);
+      if (!el) return;
+      const value = el.value.trim();
+      // Empty optional fields go back as null, not '', so the public site
+      // can treat "no link" as a single falsy case.
+      payload[column] = value === '' ? null : value;
+    });
+
+    if (!payload.shop_name) {
+      showToast('Shop name cannot be empty', 'error');
+      return;
+    }
+
+    const tax = parseFloat(payload.tax_percent);
+    if (payload.tax_percent !== null && (isNaN(tax) || tax < 0 || tax > 100)) {
+      showToast('Tax must be between 0 and 100', 'error');
+      return;
+    }
+    payload.tax_percent = payload.tax_percent === null ? 0 : tax;
+
+    // These have NOT NULL defaults in the table, so an empty box means
+    // "keep the default" rather than "write null and fail".
+    payload.currency_code = payload.currency_code || 'PKR';
+    payload.currency_symbol = payload.currency_symbol || 'Rs.';
+
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+    const { error } = await supabaseClient.from('shop_settings').update(payload).eq('id', 1);
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+
+    if (error) { showToast('Failed to save settings', 'error'); return; }
+    showToast('Settings saved!', 'success');
   }
 
   async function saveHours() {
@@ -1296,6 +1430,7 @@
 
     // Save Hours button
     document.getElementById('saveHoursBtn')?.addEventListener('click', saveHours);
+    document.getElementById('saveSettingsBtn')?.addEventListener('click', saveSettings);
 
     // Hours quick toggles
     document.getElementById('closeTodayBtn')?.addEventListener('click', closeTodayQuick);

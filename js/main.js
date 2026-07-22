@@ -103,6 +103,98 @@ $(document).ready(function () {
     let userLocation = safeReadLocalStorage('brewBeansLocation') || null;
 
     // ==========================================
+    // SHOP SETTINGS
+    // Business details live in the shop_settings table and are edited in
+    // the admin portal. The markup keeps the real values hardcoded so
+    // crawlers and a failed fetch both still see a complete page; this
+    // only overwrites what the DB actually has. Elements opt in with
+    // data-shop-* attributes, so adding a field later is markup-only.
+    // ==========================================
+    function formatPhoneForDisplay(raw) {
+        const digits = String(raw || '').replace(/[^\d+]/g, '');
+        // +92 311 2463092 — only Pakistani numbers of the expected length
+        // get grouped; anything else is shown exactly as it was entered.
+        const pk = digits.match(/^\+?92(\d{3})(\d{7})$/);
+        return pk ? `+92 ${pk[1]} ${pk[2]}` : (raw || '');
+    }
+
+    function applyShopSettings(s) {
+        const val = key => {
+            const v = s[key];
+            return v === null || v === undefined || v === '' ? null : String(v);
+        };
+
+        document.querySelectorAll('[data-shop-text]').forEach(el => {
+            const v = val(el.dataset.shopText);
+            if (v) el.textContent = v;
+        });
+
+        document.querySelectorAll('[data-shop-href]').forEach(el => {
+            const v = val(el.dataset.shopHref);
+            if (v) el.setAttribute('href', v);
+        });
+
+        document.querySelectorAll('[data-shop-src]').forEach(el => {
+            const v = val(el.dataset.shopSrc);
+            if (v) el.setAttribute('src', v);
+        });
+
+        document.querySelectorAll('[data-shop-alt]').forEach(el => {
+            const v = val(el.dataset.shopAlt);
+            if (v) el.setAttribute('alt', v);
+        });
+
+        document.querySelectorAll('[data-shop-tel]').forEach(el => {
+            const v = val(el.dataset.shopTel);
+            if (!v) return;
+            el.setAttribute('href', 'tel:' + v.replace(/[^\d+]/g, ''));
+        });
+
+        document.querySelectorAll('[data-shop-phone-text]').forEach(el => {
+            const v = val('phone');
+            if (v) el.textContent = formatPhoneForDisplay(v);
+        });
+
+        document.querySelectorAll('[data-shop-mailto]').forEach(el => {
+            const v = val(el.dataset.shopMailto);
+            if (v) el.setAttribute('href', 'mailto:' + v);
+        });
+
+        document.querySelectorAll('[data-shop-whatsapp]').forEach(el => {
+            const v = val(el.dataset.shopWhatsapp);
+            // wa.me wants bare digits; a stored "+92 311..." would 404.
+            if (v) el.setAttribute('href', 'https://wa.me/' + v.replace(/\D/g, ''));
+        });
+
+        // A social account the shop does not have should not render a dead
+        // icon, so these are hidden unless the DB has a link.
+        document.querySelectorAll('[data-shop-social]').forEach(el => {
+            const v = val(el.dataset.shopSocial);
+            if (v) {
+                el.setAttribute('href', v);
+                el.hidden = false;
+            } else {
+                el.hidden = true;
+            }
+        });
+    }
+
+    (function loadShopSettings() {
+        if (typeof supabaseClient === 'undefined') return;
+        supabaseClient
+            .from('shop_settings')
+            .select('*')
+            .eq('id', 1)
+            .maybeSingle()
+            .then(({ data, error }) => {
+                // Silent on failure — the hardcoded markup is already correct
+                // and a missing settings row must not break the page.
+                if (error || !data) return;
+                applyShopSettings(data);
+            });
+    })();
+
+    // ==========================================
     // LOADING SCREEN
     // ==========================================
     setTimeout(function () {

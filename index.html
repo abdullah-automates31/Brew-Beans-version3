@@ -142,7 +142,7 @@
     <!-- Loading Screen -->
     <div id="loading-screen">
         <div class="loading-content">
-            <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" class="loading-logo">
+            <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" data-shop-src="logo_url" data-shop-alt="shop_name" class="loading-logo">
             <p class="loading-subtext">Brewing something special...</p>
         </div>
     </div>
@@ -152,7 +152,7 @@
         <div class="modal-dialog modal-dialog-centered loc-modal-dialog">
             <div class="modal-content loc-modal">
                 <div class="loc-modal-header">
-                    <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" class="loc-modal-logo">
+                    <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" data-shop-src="logo_url" data-shop-alt="shop_name" class="loc-modal-logo">
                     <h2 class="loc-modal-title" id="locationModalTitle">Choose Your Delivery Location</h2>
                     <p class="loc-modal-subtitle">Select your delivery area to view available products and estimated delivery time.</p>
                 </div>
@@ -205,15 +205,15 @@
                     </span>
                     <i class="bi bi-chevron-down nav-info-caret"></i>
                 </button>
-                <a href="tel:+923112463092" class="nav-info-card nav-info-phone">
+                <a href="tel:+923112463092" class="nav-info-card nav-info-phone" data-shop-tel="phone">
                     <span class="nav-info-icon"><i class="bi bi-telephone-fill"></i></span>
-                    <span class="nav-info-value">+92 311 2463092</span>
+                    <span class="nav-info-value" data-shop-phone-text>+92 311 2463092</span>
                 </a>
             </div>
 
             <a class="navbar-brand" href="#home">
                 <span class="brand-badge">
-                    <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" class="brand-logo" width="872" height="439">
+                    <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" data-shop-src="logo_url" data-shop-alt="shop_name" class="brand-logo" width="872" height="439">
                 </span>
             </a>
 
@@ -746,7 +746,7 @@
                 </div>
             </div>
             <div class="text-center mt-4" data-aos="fade-up">
-                <a href="https://www.google.com/maps/search/?api=1&query=Brew+Beans+Karachi" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary">
+                <a href="https://www.google.com/maps/search/?api=1&query=Brew+Beans+Karachi" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary" data-shop-href="maps_link">
                     <i class="bi bi-google me-2"></i>See all reviews on Google
                 </a>
             </div>
@@ -770,7 +770,7 @@
                             </div>
                             <div class="contact-details">
                                 <h5>Address</h5>
-                                <p>Shop No. 6, Plot SB, Rab Medical Center,<br>Block 2 Gulshan-e-Iqbal,<br>Karachi, Pakistan</p>
+                                <p data-shop-text="address">Shop No. 6, Plot SB, Rab Medical Center,<br>Block 2 Gulshan-e-Iqbal,<br>Karachi, Pakistan</p>
                             </div>
                         </div>
                         <div class="contact-card">
@@ -779,7 +779,7 @@
                             </div>
                             <div class="contact-details">
                                 <h5>Phone</h5>
-                                <p><a href="tel:+923112463092">+92 311 2463092</a></p>
+                                <p><a href="tel:+923112463092" data-shop-tel="phone" data-shop-phone-text>+92 311 2463092</a></p>
                             </div>
                         </div>
                         <div class="contact-card">
@@ -788,7 +788,7 @@
                             </div>
                             <div class="contact-details">
                                 <h5>Email</h5>
-                                <p><a href="mailto:hello@brewbeans.pk">hello@brewbeans.pk</a></p>
+                                <p><a href="mailto:hello@brewbeans.pk" data-shop-mailto="email" data-shop-text="email">hello@brewbeans.pk</a></p>
                             </div>
                         </div>
                         <div class="contact-card">
@@ -811,9 +811,11 @@
                         </div>
 
                         <div class="social-links mt-4">
-                            <a href="https://www.facebook.com/brewbeanskhi/" class="social-link" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>
-                            <a href="https://www.instagram.com/brewbeans.karachi/" class="social-link" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>
-                            <a href="https://wa.me/923112463092" class="social-link" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i></a>
+                            <a href="https://www.facebook.com/brewbeanskhi/" class="social-link" aria-label="Facebook" target="_blank" rel="noopener noreferrer" data-shop-social="facebook_url"><i class="bi bi-facebook"></i></a>
+                            <a href="https://www.instagram.com/brewbeans.karachi/" class="social-link" aria-label="Instagram" target="_blank" rel="noopener noreferrer" data-shop-social="instagram_url"><i class="bi bi-instagram"></i></a>
+                            <a href="https://wa.me/923112463092" class="social-link" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer" data-shop-whatsapp="whatsapp"><i class="bi bi-whatsapp"></i></a>
+                            <a href="#" class="social-link" aria-label="TikTok" target="_blank" rel="noopener noreferrer" data-shop-social="tiktok_url" hidden><i class="bi bi-tiktok"></i></a>
+                            <a href="#" class="social-link" aria-label="YouTube" target="_blank" rel="noopener noreferrer" data-shop-social="youtube_url" hidden><i class="bi bi-youtube"></i></a>
                         </div>
                     </div>
                 </div>
@@ -885,13 +887,15 @@
                     <div class="col-lg-4 col-md-6">
                         <div class="footer-brand">
                             <a class="navbar-brand mb-3" href="#home">
-                                <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" class="brand-logo">
+                                <img src="img/brewbeans-logo.png" alt="Brew Beans Coffee Bar" data-shop-src="logo_url" data-shop-alt="shop_name" class="brand-logo">
                             </a>
                             <p class="footer-text">Crafting moments of joy through exceptional coffee and warm hospitality since 2018. Your daily dose of happiness.</p>
                             <div class="footer-social">
-                                <a href="https://www.facebook.com/brewbeanskhi/" aria-label="Facebook" target="_blank" rel="noopener noreferrer"><i class="bi bi-facebook"></i></a>
-                                <a href="https://www.instagram.com/brewbeans.karachi/" aria-label="Instagram" target="_blank" rel="noopener noreferrer"><i class="bi bi-instagram"></i></a>
-                                <a href="https://wa.me/923112463092" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp"></i></a>
+                                <a href="https://www.facebook.com/brewbeanskhi/" aria-label="Facebook" target="_blank" rel="noopener noreferrer" data-shop-social="facebook_url"><i class="bi bi-facebook"></i></a>
+                                <a href="https://www.instagram.com/brewbeans.karachi/" aria-label="Instagram" target="_blank" rel="noopener noreferrer" data-shop-social="instagram_url"><i class="bi bi-instagram"></i></a>
+                                <a href="https://wa.me/923112463092" aria-label="WhatsApp" target="_blank" rel="noopener noreferrer" data-shop-whatsapp="whatsapp"><i class="bi bi-whatsapp"></i></a>
+                                <a href="#" aria-label="TikTok" target="_blank" rel="noopener noreferrer" data-shop-social="tiktok_url" hidden><i class="bi bi-tiktok"></i></a>
+                                <a href="#" aria-label="YouTube" target="_blank" rel="noopener noreferrer" data-shop-social="youtube_url" hidden><i class="bi bi-youtube"></i></a>
                             </div>
                         </div>
                     </div>
