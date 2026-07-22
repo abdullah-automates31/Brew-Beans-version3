@@ -1594,6 +1594,38 @@
         min-height: 40px; border: 1.5px solid var(--border);
       }
 
+      /* The desktop row is `130px 1fr 1fr 140px` plus two native time
+         inputs, which cannot compress below roughly 650px — on a phone the
+         closing time was simply pushed off the right edge. Reflow it into
+         two lines: day + closed toggle, then the two times side by side. */
+      .hours-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.65rem 0.75rem;
+        padding: 0.9rem 1rem;
+      }
+      .hours-day { grid-area: 1 / 1; }
+      .hours-closed-wrap { grid-area: 1 / 2; justify-content: flex-end; }
+      .hours-row > .hours-time:nth-child(2) { grid-area: 2 / 1; }
+      .hours-row > .hours-time:nth-child(3) { grid-area: 2 / 2; }
+
+      /* Label above its own field, so neither has to share a line it does
+         not fit on. */
+      .hours-time {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.3rem;
+        min-width: 0;
+      }
+      .hours-time > span {
+        font-size: 0.68rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.05em;
+      }
+      .time-input { width: 100%; min-width: 0; min-height: 40px; }
+
+      .hours-quick-btns > .btn-quick-hours {
+        flex: 1 1 0; min-width: 0; min-height: 40px; justify-content: center;
+      }
+
       .menu-page-header { gap: 0.75rem; }
       .menu-search-wrap { max-width: none; flex: 1 1 100%; }
       .inv-header-actions { width: 100%; justify-content: space-between; }
@@ -1624,6 +1656,18 @@
 
     @media (max-width: 400px) {
       .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Two native time inputs stop fitting side by side somewhere around
+       here — they have a UA-enforced minimum width that `min-width: 0`
+       cannot override — so give each its own line rather than let one get
+       clipped again. */
+    @media (max-width: 360px) {
+      .hours-row { grid-template-columns: 1fr; }
+      .hours-day { grid-area: auto; }
+      .hours-closed-wrap { grid-area: auto; justify-content: flex-start; }
+      .hours-row > .hours-time:nth-child(2),
+      .hours-row > .hours-time:nth-child(3) { grid-area: auto; }
     }
 
     @media (prefers-reduced-motion: reduce) {
