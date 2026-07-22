@@ -1100,8 +1100,7 @@ $(document).ready(function () {
             $items.append(html);
         });
 
-        // Calculate delivery
-        const deliveryCharge = subtotal > 1000 ? 0 : 100;
+        const deliveryCharge = resolveDeliveryCharge(subtotal);
         const grandTotal = subtotal + deliveryCharge;
 
         $('#subtotal').text(`Rs. ${subtotal}`);
@@ -1569,7 +1568,7 @@ $(document).ready(function () {
             $items.append(html);
         });
 
-        const deliveryCharge = subtotal > 1000 ? 0 : 100;
+        const deliveryCharge = resolveDeliveryCharge(subtotal);
         checkoutDeliveryCharge = deliveryCharge;
         const total = subtotal + deliveryCharge;
 
@@ -1613,20 +1612,42 @@ $(document).ready(function () {
         };
     }
 
+    const FREE_DELIVERY_THRESHOLD = 1000;
+    const DEFAULT_DELIVERY_CHARGE = 100;
+
+    // Single source of truth for what delivery costs. The cart panel and
+    // the checkout summary each hardcoded a flat Rs. 100 while
+    // calculateDeliveryEstimate quoted the real distance-based figure, so
+    // one order could show Rs. 100 in the cart and FREE at checkout.
+    // `coords` overrides the stored location for the checkout's own
+    // detect-location button, which resolves a fix without touching
+    // userLocation.
+    function resolveDeliveryCharge(subtotal, coords) {
+        if (locOrderType === 'pickup') return 0;
+        if (subtotal > FREE_DELIVERY_THRESHOLD) return 0;
+
+        const origin = coords || userLocation;
+        if (origin && typeof origin.lat === 'number' && typeof origin.lng === 'number') {
+            return getDeliveryQuote(origin.lat, origin.lng).deliveryCost;
+        }
+        // No location picked yet — the flat rate is the honest thing to
+        // show, and it only ever drops once we know where they are.
+        return DEFAULT_DELIVERY_CHARGE;
+    }
+
     function calculateDeliveryEstimate(lat, lng) {
         const quote = getDeliveryQuote(lat, lng);
         const distance = quote.distance;
         const deliveryTime = quote.deliveryTime;
-        const deliveryCost = quote.deliveryCost;
 
         $('#deliveryDistance').text(`${distance.toFixed(1)} km`);
         $('#deliveryTime').text(`${deliveryTime} mins`);
-        $('#deliveryCost').text(`Rs. ${deliveryCost}`);
+        $('#deliveryCost').text(`Rs. ${quote.deliveryCost}`);
         $('#deliveryEstimate').show();
 
-        // Update checkout delivery
+        // Through the shared resolver, so this agrees with the cart panel.
         const subtotal = cart.reduce((sum, item) => sum + ((item.price + (item.addonPrice || 0)) * item.quantity), 0);
-        const finalDelivery = subtotal > 1000 ? 0 : deliveryCost;
+        const finalDelivery = resolveDeliveryCharge(subtotal, { lat: lat, lng: lng });
         checkoutDeliveryCharge = finalDelivery;
         $('#checkoutDelivery').text(finalDelivery === 0 ? 'FREE' : `Rs. ${finalDelivery}`);
         $('#checkoutTotal').text(`Rs. ${subtotal + finalDelivery}`);
