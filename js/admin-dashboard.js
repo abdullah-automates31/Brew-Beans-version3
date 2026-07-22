@@ -785,8 +785,6 @@
     maps_link:       'setMapsLink',
     facebook_url:    'setFacebook',
     instagram_url:   'setInstagram',
-    tiktok_url:      'setTiktok',
-    youtube_url:     'setYoutube',
     tax_percent:     'setTax',
     currency_code:   'setCurrencyCode',
     currency_symbol: 'setCurrencySymbol',

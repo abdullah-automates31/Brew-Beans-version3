@@ -20,8 +20,6 @@ create table if not exists public.shop_settings (
     -- Social links. Null or empty means "hide this icon" on the public site.
     facebook_url      text,
     instagram_url     text,
-    tiktok_url        text,
-    youtube_url       text,
 
     -- Not yet applied to order totals — see the note at the bottom.
     tax_percent       numeric(5,2) not null default 0 check (tax_percent >= 0 and tax_percent <= 100),
