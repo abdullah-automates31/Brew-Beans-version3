@@ -3059,6 +3059,35 @@ html.bb-no-splash #loading-screen {
     box-shadow: var(--shadow-lg);
 }
 
+/* Bootstrap ships this as #0d6efd and it was never themed, so the staff
+   dashboard's filter tabs and the contact section's Get Directions
+   button both rendered bright blue on a green-and-cream site. Border
+   radius is deliberately left to Bootstrap so .btn-group keeps its
+   segmented corners. */
+.btn-outline-primary {
+    color: var(--primary);
+    border-color: var(--primary);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.btn-outline-primary:hover,
+.btn-outline-primary.active,
+.btn-outline-primary:active,
+.btn-check:checked + .btn-outline-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--accent);
+}
+
+/* Bootstrap's focus ring reads from --bs-btn-focus-shadow-rgb, which is
+   still blue even once the fill is green. */
+.btn-primary:focus-visible,
+.btn-outline-primary:focus-visible {
+    box-shadow: 0 0 0 0.25rem rgba(15, 61, 46, 0.3);
+    outline: none;
+}
+
 /* ============================================
    RESPONSIVE DESIGN
    ============================================ */
