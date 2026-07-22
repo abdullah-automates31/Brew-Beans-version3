@@ -6,10 +6,10 @@ Static coffee shop site (HTML/CSS/JS + Bootstrap 5.3.2) with Supabase backend. D
 
 | Directory | Stack | Entry | Dev command |
 |-----------|-------|-------|-------------|
-| root (no `node_modules`) | HTML/CSS/JS + CDN deps | `index.html` | `npx serve .` or open directly |
-| `brewbeans-next/` | Next.js 15 + React 18 + Supabase JS v2 | `brewbeans-next/app/` | `npm run dev` (turbopack) |
+| root (no `node_modules`) | HTML/CSS/JS + CDN deps | `index.html` | `npx serve .` or open directly via HTTP (not `file://`) |
+| `brewbeans-next/` | Next.js 15 + React 18 + Supabase JS v2 | `brewbeans-next/app/` | `npm run dev`, `npm run build`, `npm run lint` |
 
-Edit the correct one. `Brew-Beans/` (nested) and `brewbeans-next/` are distinct projects — the first is an outdated backup, the second is a Next.js rewrite-in-progress. Neither is the "active" static site.
+**`Brew-Beans/`** is an outdated backup — ignore it. Edit only root or `brewbeans-next/`.
 
 ## Pages & JS (static site root)
 
@@ -22,49 +22,54 @@ Edit the correct one. `Brew-Beans/` (nested) and `brewbeans-next/` are distinct 
 | `admin-dashboard.html` | `js/admin-dashboard.js` | Full admin UI (Supabase Auth session) |
 | `privacy-policy.html`, `terms.html` | none | Static legal pages |
 
-**Shared**: `js/supabase-config.js` (global `supabaseClient`) and `js/scroll-fx.js` (AOS init + scroll progress bar) on **all pages except `index.html`** (index skips `scroll-fx.js`; AOS is inited inside `main.js`).
+**Shared**: `js/supabase-config.js` (global `supabaseClient`, shop TZ = `Asia/Karachi` via `getShopNow()`) on **all pages except `privacy-policy.html`/`terms.html`**. `js/scroll-fx.js` (AOS init + scroll progress bar) **only** on `order-tracking.html` and `staff.html`; index inits AOS inside `main.js`.
 
 **Script load order** (no bundler — order matters):
 ```
 Bootstrap JS → jQuery 3.7.1 → AOS 2.3.4 → Supabase JS v2 → supabase-config.js → page JS → [scroll-fx.js]
 ```
 
-## CDN deps (no `node_modules`)
-Bootstrap 5.3.2 + Icons 1.11.1, jQuery 3.7.1, AOS 2.3.4, Google Fonts (Poppins, Playfair Display), Supabase JS v2.
-
 ## Security headers
 
-**`vercel.json` is the source of truth** (active deployment). `_headers` is a legacy Netlify artifact — its CSP uses a **wrong Supabase URL** (`uomaumlqblvaukalaqei.supabase.co` vs `rtqbpviegxwgaknmrrsg.supabase.co`) and is missing `wss://`. Keep both in sync if editing either.
+**`vercel.json` is the source of truth**. `_headers` is a legacy Netlify artifact — its CSP uses the **wrong Supabase URL** and lacks `wss://`. Keep both in sync when editing either.
 
-When adding external CDN scripts or inline `<script>` blocks, update CSP in both files.
+When adding CDN scripts or inline `<script>` blocks, update CSP in both files. Payment gateway domains in `form-action`.
 
 ## Supabase
 
-- Project ref: `rtqbpviegxwgaknmrrsg` — URL and anon key in `js/supabase-config.js`
-- **Critical writes** go through Edge Functions (TypeScript/Deno) for server-side validation. Read-only queries use RPCs.
+- Project ref: `rtqbpviegxwgaknmrrsg` — URL + anon key in `js/supabase-config.js`
+- **Critical writes** go through Edge Functions (typecheck/Deno). Read-only queries use RPCs.
 
 | Layer | Functions | Location |
 |-------|-----------|----------|
-| Edge Functions | `submit-order`, `update-order-status`, `create-payment` | `supabase/functions/*/index.ts` |
+| Edge Functions | `submit-order`, `update-order-status`, `create-payment`, `payment-callback` | `supabase/functions/*/index.ts` |
 | RPCs (read/admin) | `get_order_status`, `staff_list_orders`, `get_business_hours` | Supabase DB only |
 
-- **Edge Functions** use `SUPABASE_SERVICE_ROLE_KEY` env to bypass RLS. Deploy: `supabase functions deploy <name>`.
-- `menu-seed.sql` — reseeds `menu_items` table. `addon-seed.sql` — populates addon groups/options (idempotent).
-- **Addon system** is DB-driven (fetched live). The `submit-order` Edge Function re-validates addon prices — client-side addon prices are ignored.
+- Edge Functions use `SUPABASE_SERVICE_ROLE_KEY` env to bypass RLS. Deploy: `supabase functions deploy <name>`.
+- `supabase/menu-seed.sql` — reseeds `menu_items`. `addon-seed.sql` — addon groups/options (idempotent).
+- **Addons**: DB-driven (fetched live). `submit-order` re-validates addon prices server-side; client prices ignored.
+- **Shop settings**: single-row `shop_settings` table (`id = 1`) — name, logo, phone, WhatsApp, email, address, maps link, socials, tax %, currency. Edited under Settings in the admin portal. Run `shop-settings.sql` once for the table, RLS and the public `shop-assets` bucket used for logo uploads. `index.html` keeps real values hardcoded and overwrites them at runtime via `data-shop-*` attributes handled by `applyShopSettings()` in `js/main.js`, so a failed fetch still renders a complete page and new fields are markup-only. Uploaded logos come from Supabase Storage, so keep that origin in the CSP `img-src`. `tax_percent` is stored but **not** applied to totals yet — that belongs in `submit-order`.
+- **Payments**: `create-payment` builds signed gateway forms; `payment-callback` verifies hash & updates `orders.payment_status`. Fallback to COD when merchant secrets unset. Go-live guide at `supabase/functions/PAYMENTS.md`.
+- `_shared/jazzcash.ts` — HMAC-SHA256 signing for JazzCash requests and callback verification.
 
-## Key state & storage
+## Storage keys
 
-- `localStorage`: `brewBeansCart` (sanitized on read), `brewBeansLastCustomer`, `brewBeansLastOrder`, `brewBeansLocation`
-- `sessionStorage`: `bbStaffPin` (staff PIN), `bb_phone_${orderNumber}` (customer phone, avoids URL exposure)
-- Delivery ETA: 15 min prep + 25 min delivery (8 min pickup). Haversine formula with shop at `24.9180°N, 67.0971°E`.
+| Key | Storage | Purpose |
+|-----|---------|---------|
+| `brewBeansCart` | localStorage | Cart items keyed by product id; sanitized on read |
+| `brewBeansLastCustomer` | localStorage | Returning customer profile |
+| `brewBeansLastOrder` | localStorage | `{ orderNumber, phone }` for quick re-tracking |
+| `brewBeansLocation` | localStorage | Cached `{ lat, lng }` from geolocation |
+| `bbStaffPin` | sessionStorage | Staff PIN; cleared on logout |
+| `bb_phone_${orderNumber}` | sessionStorage | Phone for tracking page (avoids URL exposure) |
 
 ## Order status flow
 
-`placed` → `preparing` → `out_for_delivery` → `delivered`. `cancelled` from any state. Enforced by the `update-order-status` Edge Function.
+`placed` → `preparing` → `out_for_delivery` → `delivered`. `cancelled` from any state.
 
-## Coding
+## Coding conventions
 
-- 4-space indentation for HTML/CSS/JS. JS: `camelCase`. CSS custom props: kebab-case under `:root`.
+- 4-space indentation. JS: `camelCase`. CSS custom props: kebab-case under `:root`.
 - XSS prevention: `escapeHtml()` or `innerText` throughout.
-- Payment gateways (JazzCash, EasyPaisa): form redirects to sandbox domains, whitelisted in CSP `form-action`.
+- Payment gateways: form redirects to sandbox domains; CSP `form-action` whitelists them.
 - No automated tests — verify manually at desktop/mobile viewports.
