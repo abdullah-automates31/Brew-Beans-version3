@@ -773,7 +773,7 @@
   }
 
   // ── SHOP SETTINGS ──
-  // Single row, id = 1 (see shop-settings.sql). Every field maps to one
+  // Single row, id = 1 (see supabase/shop-settings.sql). Every field maps to one
   // input, so load/save are just two passes over the same map.
   const SETTINGS_FIELDS = {
     shop_name:       'setShopName',
@@ -842,7 +842,7 @@
       .from('shop_settings').select('*').eq('id', 1).maybeSingle();
 
     if (error || !data) {
-      showToast('Failed to load settings — has shop-settings.sql been run?', 'error');
+      showToast('Failed to load settings — has supabase/shop-settings.sql been run?', 'error');
       return;
     }
 
@@ -888,7 +888,7 @@
     if (error) {
       // Almost always a missing bucket or policy — say which, the
       // generic storage message is not actionable.
-      showToast(`Upload failed: ${error.message}. Has shop-settings.sql been run?`, 'error');
+      showToast(`Upload failed: ${error.message}. Has supabase/shop-settings.sql been run?`, 'error');
       return null;
     }
 

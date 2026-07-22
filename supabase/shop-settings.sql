@@ -69,6 +69,15 @@ create trigger shop_settings_touch
     before update on public.shop_settings
     for each row execute function public.touch_shop_settings();
 
+-- ── Grants ──
+-- RLS policies decide which ROWS a role may touch; they do not grant the
+-- privilege to touch the table at all. A table created from the SQL
+-- editor starts with no grants to anon/authenticated, so without these
+-- every request fails with 42501 "permission denied for table" before
+-- any policy is even consulted.
+grant select on public.shop_settings to anon, authenticated;
+grant update on public.shop_settings to authenticated;
+
 -- ── RLS ──
 -- Anyone may read: the public site needs the phone number, address and
 -- social links to render. Only a signed-in admin may write.
@@ -93,11 +102,11 @@ insert into storage.buckets (id, name, public)
 values ('shop-assets', 'shop-assets', true)
 on conflict (id) do nothing;
 
+-- No SELECT policy on purpose. The bucket is public, so
+-- /storage/v1/object/public/shop-assets/... serves the logo without
+-- consulting RLS at all. A broad SELECT policy would add nothing for
+-- that, and would let anyone LIST every file in the bucket.
 drop policy if exists "shop-assets public read" on storage.objects;
-create policy "shop-assets public read"
-    on storage.objects for select
-    to anon, authenticated
-    using (bucket_id = 'shop-assets');
 
 drop policy if exists "shop-assets admin write" on storage.objects;
 create policy "shop-assets admin write"
