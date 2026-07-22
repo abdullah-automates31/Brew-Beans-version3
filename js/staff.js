@@ -159,7 +159,9 @@ function showLoginView(message) {
 }
 
 async function verifyAndEnter(pin) {
-    const { data, error } = await supabaseClient.rpc('staff_list_orders', { p_pin: pin });
+    const { data, error } = await supabaseClient.functions.invoke('staff-list-orders', {
+        body: { p_pin: pin }
+    });
     if (error) {
         throw new Error('Incorrect PIN');
     }
@@ -302,7 +304,9 @@ async function loadOrders(isInitial) {
         if (!settled) { settled = true; showLoginView('Connection timed out. Check internet and try again.'); }
     }, 12000);
 
-    const { data, error } = await supabaseClient.rpc('staff_list_orders', { p_pin: staffPin });
+    const { data, error } = await supabaseClient.functions.invoke('staff-list-orders', {
+        body: { p_pin: staffPin }
+    });
     clearTimeout(timeoutId);
     if (settled) return;
     settled = true;

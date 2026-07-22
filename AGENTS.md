@@ -17,7 +17,7 @@ No automated tests in either project — verify at desktop + mobile viewports.
 |------|----|-------|
 | `index.html` | `js/main.js` | Hardcoded `menuItems` array (16 items); cart, ordering, geolocation |
 | `order-tracking.html` | `js/order-tracking.js` | Polls every 10 s |
-| `staff.html` | `js/staff.js` | PIN-based auth (verified via RPC), polls 15 s |
+| `staff.html` | `js/staff.js` | PIN-based auth (verified via Edge Function `staff-list-orders`), polls 15 s |
 | `admin.html` | inline script only | Supabase Auth email/password login |
 | `admin-dashboard.html` | `js/admin-dashboard.js` | Full admin UI (inline `<style>`, loads Chart.js) |
 | `privacy-policy.html`, `terms.html` | none | Static legal pages |
@@ -43,9 +43,9 @@ Bootstrap JS → jQuery 3.7.1 → AOS 2.3.4 → Motion 12.42.2 → Supabase JS v
 **Project**: `rtqbpviegxwgaknmrrsg` — URL + anon key in `js/supabase-config.js`.  
 **Critical writes → Edge Functions** (TypeScript/Deno, use `SUPABASE_SERVICE_ROLE_KEY`). Read-only queries → RPCs.
 
-| Edge Functions | `submit-order`, `update-order-status`, `create-payment`, `payment-callback` |
-|---|---|
-| RPCs | `get_order_status`, `staff_list_orders`, `get_business_hours` |
+| Edge Functions | `submit-order`, `update-order-status`, `create-payment`, `payment-callback`, `staff-list-orders` |
+|---|---|---|
+| RPCs | `get_order_status`, `get_business_hours`, `get_customer_orders` (anon), `verify_staff_pin` (service_role only) |
 | Deploy | `supabase functions deploy <name>` |
 
 Key patterns:
@@ -53,7 +53,7 @@ Key patterns:
 - **Inventory** (`ingredients` table): authenticated-only, no anon grant. Status derived (`<=0` Out, `<= min_stock` Low, else In). Recipe deduction **not implemented**.
 - **Shop settings** (`shop_settings`, id=1): single-row, editable via admin portal. `index.html` hardcodes fallback values, overwrites via `data-shop-*` attributes (`applyShopSettings()` in `main.js`). Run `supabase/shop-settings.sql` to create table + grants + RLS + storage bucket. **Grants required** — RLS alone 42501s. `tax_percent` stored but not yet applied to totals.
 - **Payments**: `create-payment` builds signed gateway forms; `payment-callback` verifies hash. Falls back to COD when merchant secrets unset. Guide: `supabase/functions/PAYMENTS.md`.
-- **Staff auth**: PIN-based (not Supabase Auth), verified via RPC, cached in `sessionStorage` (`bbStaffPin`).
+- **Staff auth**: PIN-based (not Supabase Auth), verified via Edge Function `staff-list-orders` (service role key), cached in `sessionStorage` (`bbStaffPin`). PINs stored as bcrypt hash (pgcrypto `crypt()`/`gen_salt('bf')` via `staff_pins_hash` trigger). Admin dashboard cannot reveal existing PINs — only set new ones.
 
 ---
 

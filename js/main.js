@@ -1948,20 +1948,14 @@ $(document).ready(function () {
         if (cached && cached.phone.replace(/[\s\-()]/g, '') === normalized) return cached;
 
         try {
-            const { data: orders } = await supabaseClient
-                .from('orders')
-                .select('id, customer_name, email, payment_method')
-                .eq('phone', phone)
-                .order('created_at', { ascending: false })
-                .limit(5);
-            if (!orders || !orders.length) return null;
+            const { data: ordersData, error: ordersError } = await supabaseClient
+                .rpc('get_customer_orders', { p_phone: phone });
 
-            const orderIds = orders.map(o => o.id);
-            const { data: items } = await supabaseClient
-                .from('order_items')
-                .select('menu_item_id, menu_item_name, quantity')
-                .in('order_id', orderIds);
+            if (ordersError) throw ordersError;
+            const orders = ordersData || [];
+            if (!orders.length) return null;
 
+            const items = orders.flatMap(o => o.items || []);
             const freq = {};
             (items || []).forEach(i => {
                 if (!freq[i.menu_item_id]) freq[i.menu_item_id] = { id: i.menu_item_id, name: i.menu_item_name, image: '', count: 0 };

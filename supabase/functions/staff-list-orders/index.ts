@@ -8,7 +8,7 @@ const corsHeaders = {
 }
 
 const RATE_LIMIT_WINDOW = 60_000
-const RATE_LIMIT_MAX = 10
+const RATE_LIMIT_MAX = 5
 const attemptStore = new Map<string, { count: number; resetAt: number }>()
 
 function getClientIp(req: Request): string {
@@ -29,12 +29,6 @@ function checkRateLimit(ip: string): boolean {
   return true
 }
 
-interface ReqBody {
-  p_pin: string
-  p_order_number: string
-  p_new_status: string
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -50,10 +44,10 @@ serve(async (req) => {
   }
 
   try {
-    const body: ReqBody = await req.json()
+    const { p_pin } = await req.json()
 
-    if (!body.p_pin || !body.p_order_number || !body.p_new_status) {
-      return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400, headers: corsHeaders })
+    if (!p_pin) {
+      return new Response(JSON.stringify({ error: 'PIN is required' }), { status: 400, headers: corsHeaders })
     }
 
     const supabase = createClient(
@@ -62,7 +56,7 @@ serve(async (req) => {
     )
 
     const { data: pinData, error: pinError } = await supabase
-      .rpc('verify_staff_pin', { p_pin: body.p_pin })
+      .rpc('verify_staff_pin', { p_pin })
       .maybeSingle()
 
     if (pinError) throw pinError
@@ -70,24 +64,51 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Invalid PIN' }), { status: 401, headers: corsHeaders })
     }
 
-    const validStatuses = ['placed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled']
-    if (!validStatuses.includes(body.p_new_status)) {
-      return new Response(JSON.stringify({ error: 'Invalid status' }), { status: 400, headers: corsHeaders })
+    const { data: orders, error: ordersError } = await supabase
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (ordersError) throw ordersError
+
+    const orderIds = (orders || []).map(o => o.id)
+    if (orderIds.length === 0) {
+      return new Response(JSON.stringify([]), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const { error: updateError } = await supabase
-      .from('orders')
-      .update({ status: body.p_new_status, updated_at: new Date().toISOString() })
-      .eq('order_number', body.p_order_number)
+    const { data: orderItems, error: itemsError } = await supabase
+      .from('order_items')
+      .select('order_id, menu_item_name, quantity')
+      .in('order_id', orderIds)
 
-    if (updateError) throw updateError
+    if (itemsError) throw itemsError
+
+    const itemsByOrder: Record<number, { name: string; quantity: number }[]> = {}
+    for (const item of orderItems || []) {
+      if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = []
+      itemsByOrder[item.order_id].push({ name: item.menu_item_name, quantity: item.quantity })
+    }
+
+    const result = (orders || []).map(order => ({
+      order_number: order.order_number,
+      customer_name: order.customer_name,
+      phone: order.phone,
+      address: order.address,
+      notes: order.notes,
+      total: order.total,
+      status: order.status,
+      payment_method: order.payment_method,
+      payment_status: order.payment_status,
+      created_at: order.created_at,
+      items: itemsByOrder[order.id] || [],
+    }))
 
     return new Response(
-      JSON.stringify({ success: true, status: body.p_new_status }),
+      JSON.stringify(result),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
-    console.error('update-order-status error:', err)
+    console.error('staff-list-orders error:', err)
     return new Response(
       JSON.stringify({ error: err.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

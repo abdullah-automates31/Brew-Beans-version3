@@ -1500,31 +1500,25 @@
             <tr style="border-bottom:1px solid var(--border-light)">
               <td style="padding:0.85rem 1.25rem;font-weight:500">${escHtml(s.name)}</td>
               <td style="padding:0.85rem 1.25rem">
-                <span class="pin-display" data-id="${s.id}" data-pin="${escHtml(s.pin)}" style="font-family:monospace;cursor:pointer" title="Click to reveal">••••</span>
+                <span style="font-family:monospace">••••</span>
               </td>
               <td style="padding:0.85rem 1.25rem;color:var(--text-light);font-size:0.85rem">${new Date(s.created_at).toLocaleDateString()}</td>
               <td style="padding:0.85rem 1.25rem;text-align:right;white-space:nowrap">
-                <button class="btn-icon" data-action="edit-staff" data-id="${s.id}" data-name="${escHtml(s.name)}" data-pin="${escHtml(s.pin)}" title="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="btn-icon" data-action="edit-staff" data-id="${s.id}" data-name="${escHtml(s.name)}" title="Edit PIN"><i class="bi bi-pencil"></i></button>
                 <button class="btn-icon danger" data-action="delete-staff" data-id="${s.id}" data-name="${escHtml(s.name)}" title="Delete"><i class="bi bi-trash"></i></button>
               </td>
             </tr>`).join('')}
         </tbody>
       </table>
       </div>`;
-
-    document.querySelectorAll('.pin-display').forEach(el => {
-      el.addEventListener('click', function() {
-        this.textContent = this.textContent === '••••' ? this.dataset.pin : '••••';
-      });
-    });
   }
 
-  function openStaffModal(id, name, pin) {
-    id = id || null; name = name || ''; pin = pin || '';
+  function openStaffModal(id, name) {
+    id = id || null; name = name || '';
     editingStaffId = id;
-    document.getElementById('staffModalTitle').textContent = id ? 'Edit Staff' : 'Add Staff';
+    document.getElementById('staffModalTitle').textContent = id ? 'Set New PIN' : 'Add Staff';
     document.getElementById('staffName').value = name;
-    document.getElementById('staffPin').value = pin;
+    document.getElementById('staffPin').value = '';
     document.getElementById('staffSaveBtn').textContent = id ? 'Update' : 'Save';
     document.getElementById('staffModal').classList.add('show');
     document.body.style.overflow = 'hidden';
@@ -1542,15 +1536,20 @@
     const name = document.getElementById('staffName').value.trim();
     const pin  = document.getElementById('staffPin').value.trim();
     if (!name) { showToast('Name is required', 'error'); return; }
-    if (!/^\d{4,6}$/.test(pin)) { showToast('PIN must be 4–6 digits', 'error'); return; }
 
     const btn = document.getElementById('staffSaveBtn');
     btn.textContent = 'Saving...'; btn.disabled = true;
 
     let error;
     if (editingStaffId) {
-      ({ error } = await supabaseClient.from('staff_pins').update({ name, pin }).eq('id', editingStaffId));
+      const updates = { name };
+      if (pin) {
+        if (!/^\d{4,6}$/.test(pin)) { showToast('PIN must be 4–6 digits', 'error'); btn.textContent = 'Update'; btn.disabled = false; return; }
+        updates.pin = pin;
+      }
+      ({ error } = await supabaseClient.from('staff_pins').update(updates).eq('id', editingStaffId));
     } else {
+      if (!/^\d{4,6}$/.test(pin)) { showToast('PIN must be 4–6 digits', 'error'); btn.textContent = 'Save'; btn.disabled = false; return; }
       ({ error } = await supabaseClient.from('staff_pins').insert({ name, pin }));
     }
 
@@ -2149,8 +2148,8 @@
     document.getElementById('staffList')?.addEventListener('click', e => {
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
-      const { action, id, name, pin } = btn.dataset;
-      if (action === 'edit-staff')   openStaffModal(id, name, pin);
+      const { action, id, name } = btn.dataset;
+      if (action === 'edit-staff')   openStaffModal(id, name);
       if (action === 'delete-staff') deleteStaff(id, name);
     });
 
