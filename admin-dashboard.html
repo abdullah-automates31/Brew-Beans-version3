@@ -406,15 +406,44 @@
     .card-body { padding: 1.5rem; }
 
     /* ── ORDERS TABLE ── */
-    .orders-filters {
+    /* One toolbar instead of three stacked strips: the filter tabs, search
+       and advanced filters used to each carry their own padding, border and
+       background, which read as three unrelated bars stacked on top of one
+       another. They are one control group, so they get one container. */
+    .orders-toolbar {
       display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 0.85rem;
       padding: 1rem 1.5rem;
       border-bottom: 1px solid var(--border);
     }
 
+    .orders-toolbar-top {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      min-width: 0;
+    }
+
+    /* The tabs scroll on a single line rather than wrapping. Four pills that
+       break after the third — leaving "Cancelled" orphaned on its own row —
+       is what made the narrow layout look ragged. */
+    .filter-tabs {
+      display: flex;
+      gap: 0.4rem;
+      flex: 1 1 auto;
+      min-width: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .filter-tabs::-webkit-scrollbar { display: none; }
+
     .filter-btn {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      min-height: 36px;
       padding: 0.4rem 0.9rem;
       border: 1.5px solid var(--border);
       background: white;
@@ -614,11 +643,6 @@
     .payment-pending  { background: #FEF3C7; color: #D97706; }
 
     /* ── SEARCH ── */
-    .search-wrapper {
-      padding: 0.75rem 1.5rem;
-      border-bottom: 1px solid var(--border);
-    }
-
     .search-input-wrap {
       position: relative;
     }
@@ -634,6 +658,7 @@
 
     .search-input {
       width: 100%;
+      min-height: 40px;
       padding: 0.55rem 1rem 0.55rem 2.5rem;
       border: 1.5px solid var(--border);
       border-radius: 20px;
@@ -1298,28 +1323,45 @@
     .assign-group-row label { flex: 1; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
 
     /* ── ADVANCED ORDER FILTERS ── */
+    /* Each control now sits under its own label instead of the controls and
+       their labels sharing one wrapping line, where a reflow could leave a
+       label on one row and the input it describes on the next. */
     .advanced-filters {
-      display: flex; flex-wrap: wrap; gap: 0.5rem;
-      padding: 0.75rem 1.5rem; border-bottom: 1px solid var(--border);
-      align-items: center; background: var(--bg);
+      display: flex; flex-wrap: wrap;
+      gap: 0.85rem 1.25rem; align-items: flex-end;
+      padding-top: 0.85rem; border-top: 1px dashed var(--border);
     }
-    .adv-filter-label { font-size: 0.75rem; font-weight: 600; color: var(--text-light); margin-right: 0.25rem; }
+    .adv-group { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+    .adv-group--date { flex: 1 1 260px; max-width: 340px; }
+    .adv-group--pay { flex: 1 1 240px; max-width: 330px; }
+    .adv-filter-label {
+      font-size: 0.68rem; font-weight: 700; color: var(--text-light);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .adv-controls { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+    .adv-controls .adv-filter-input { flex: 1 1 0; min-width: 0; }
     .adv-filter-input {
-      padding: 0.35rem 0.65rem; border: 1.5px solid var(--border);
+      min-height: 38px;
+      padding: 0.4rem 0.6rem; border: 1.5px solid var(--border);
       border-radius: 8px; font-size: 0.8rem; font-family: inherit;
       background: white; color: var(--text-dark); cursor: pointer;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
-    .adv-filter-input:focus { outline: none; border-color: var(--secondary); }
-    .adv-filter-sep { color: var(--border); font-size: 0.85rem; }
+    .adv-filter-input:focus {
+      outline: none; border-color: var(--secondary);
+      box-shadow: 0 0 0 3px rgba(46,139,87,0.12);
+    }
+    .adv-filter-sep { color: var(--text-light); font-size: 0.8rem; flex: 0 0 auto; }
     .adv-clear-btn {
       margin-left: auto; font-size: 0.78rem; color: var(--secondary);
       background: none; border: none; cursor: pointer; font-weight: 600;
-      padding: 0.3rem 0.5rem; border-radius: 6px;
+      display: inline-flex; align-items: center; gap: 0.3rem;
+      min-height: 38px; padding: 0.3rem 0.6rem; border-radius: 8px;
+      transition: background 0.2s;
     }
     .adv-clear-btn:hover { background: rgba(46,139,87,0.08); }
-    .orders-filter-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .btn-bulk-select {
+      flex: 0 0 auto; white-space: nowrap; min-height: 36px;
       padding: 0.4rem 0.9rem; border: 1.5px solid var(--border);
       background: white; border-radius: 20px; font-size: 0.82rem;
       font-family: inherit; cursor: pointer; color: var(--text-medium);
@@ -1556,6 +1598,19 @@
       .inv-stat { flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 0.85rem; }
       .inv-stat-value { font-size: 1.15rem; }
       .inv-stat-label { font-size: 0.7rem; }
+
+      /* Both filter groups go full width and each control shares the row
+         evenly, so the two dates line up and the two selects line up
+         instead of breaking wherever they happen to run out of space. */
+      .orders-toolbar { padding: 0.85rem 1rem; }
+      .orders-toolbar-top { gap: 0.5rem; }
+      .filter-btn, .btn-bulk-select { min-height: 40px; }
+      .advanced-filters { gap: 0.85rem; }
+      .adv-group { flex: 1 1 100%; max-width: none; }
+      .adv-clear-btn {
+        margin-left: 0; flex: 1 1 100%; justify-content: center;
+        min-height: 40px; border: 1.5px solid var(--border);
+      }
 
       .menu-page-header { gap: 0.75rem; }
       .menu-search-wrap { max-width: none; flex: 1 1 100%; }
@@ -2265,41 +2320,50 @@
       </div>
 
       <div class="card">
-        <div class="orders-filters orders-filter-row">
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-            <button class="filter-btn active" data-filter="active">Active</button>
-            <button class="filter-btn" data-filter="all">All Orders</button>
-            <button class="filter-btn" data-filter="delivered">Delivered</button>
-            <button class="filter-btn" data-filter="cancelled">Cancelled</button>
+        <div class="orders-toolbar">
+          <div class="orders-toolbar-top">
+            <div class="filter-tabs">
+              <button class="filter-btn active" data-filter="active">Active</button>
+              <button class="filter-btn" data-filter="all">All Orders</button>
+              <button class="filter-btn" data-filter="delivered">Delivered</button>
+              <button class="filter-btn" data-filter="cancelled">Cancelled</button>
+            </div>
+            <button class="btn-bulk-select" id="bulkSelectBtn"><i class="bi bi-check2-square"></i> Select</button>
           </div>
-          <button class="btn-bulk-select" id="bulkSelectBtn"><i class="bi bi-check2-square"></i> Select</button>
-        </div>
-        <div class="search-wrapper">
+
           <div class="search-input-wrap">
             <i class="bi bi-search"></i>
             <input type="text" class="search-input" id="searchInput" placeholder="Search by name, phone or order number...">
           </div>
-        </div>
-        <div class="advanced-filters">
-          <span class="adv-filter-label">Date:</span>
-          <input type="date" class="adv-filter-input" id="filterDateFrom">
-          <span class="adv-filter-sep">→</span>
-          <input type="date" class="adv-filter-input" id="filterDateTo">
-          <span class="adv-filter-sep" style="margin-left:0.75rem">|</span>
-          <span class="adv-filter-label" style="margin-left:0.75rem">Payment:</span>
-          <select class="adv-filter-input" id="filterPayMethod">
-            <option value="">All Methods</option>
-            <option value="cod">Cash on Delivery</option>
-            <option value="jazzcash">JazzCash</option>
-            <option value="easypaisa">EasyPaisa</option>
-          </select>
-          <select class="adv-filter-input" id="filterPayStatus">
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="failed">Failed</option>
-          </select>
-          <button class="adv-clear-btn" id="clearFiltersBtn"><i class="bi bi-x-circle"></i> Clear</button>
+
+          <div class="advanced-filters">
+            <div class="adv-group adv-group--date">
+              <span class="adv-filter-label">Date range</span>
+              <div class="adv-controls">
+                <input type="date" class="adv-filter-input" id="filterDateFrom" aria-label="Orders from date">
+                <span class="adv-filter-sep" aria-hidden="true">→</span>
+                <input type="date" class="adv-filter-input" id="filterDateTo" aria-label="Orders to date">
+              </div>
+            </div>
+            <div class="adv-group adv-group--pay">
+              <span class="adv-filter-label">Payment</span>
+              <div class="adv-controls">
+                <select class="adv-filter-input" id="filterPayMethod" aria-label="Payment method">
+                  <option value="">All Methods</option>
+                  <option value="cod">Cash on Delivery</option>
+                  <option value="jazzcash">JazzCash</option>
+                  <option value="easypaisa">EasyPaisa</option>
+                </select>
+                <select class="adv-filter-input" id="filterPayStatus" aria-label="Payment status">
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="paid">Paid</option>
+                  <option value="failed">Failed</option>
+                </select>
+              </div>
+            </div>
+            <button class="adv-clear-btn" id="clearFiltersBtn"><i class="bi bi-x-circle"></i> Clear</button>
+          </div>
         </div>
         <div class="orders-list" id="ordersList">
           <div class="loading-spinner">
