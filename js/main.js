@@ -348,24 +348,49 @@ $(document).ready(function () {
         if (area) selectArea(area);
     });
 
-    // Best-effort match of a Nominatim reverse-geocode result against the
-    // curated area list — real addresses rarely line up with our fixed
-    // names exactly, so this checks the common address fields plus a
-    // DHA/Defence + phase-number special case before giving up.
-    function matchAreaFromAddress(address, displayName) {
-        const haystack = [
-            address.suburb, address.neighbourhood, address.city_district,
-            address.residential, address.quarter, address.town, address.county,
-            displayName
-        ].filter(Boolean).join(' ').toLowerCase();
+    // OSM almost never spells an area the way our curated list does, so each
+    // entry carries the variants that actually turn up in Nominatim results.
+    // "FB Area" is the one that matters most: it is how OSM labels Federal B
+    // Area, and without it a Federal B Area address matches nothing.
+    const AREA_ALIASES = {
+        'Federal B Area': ['fb area', 'f.b. area', 'f b area', 'federal b. area'],
+        'Gulshan-e-Iqbal': ['gulshan e iqbal', 'gulshan iqbal'],
+        'Gulistan-e-Johar': ['gulistan e johar', 'gulshan-e-johar', 'gulshan e johar'],
+        'North Nazimabad': ['n. nazimabad', 'north nazimabad town'],
+        'PECHS': ['p.e.c.h.s', 'pakistan employees co-operative housing society'],
+        'Shah Faisal Colony': ['shah faisal town', 'shah faisal'],
+        'Defence View': ['defence view society']
+    };
 
-        // Longest name first, so a "North Nazimabad" address doesn't get
-        // claimed by the shorter "Nazimabad" entry just because it sits
-        // earlier in the list.
-        const byLength = KARACHI_AREAS.slice().sort((a, b) => b.name.length - a.name.length);
-        const direct = byLength.find(a => haystack.includes(a.name.toLowerCase()));
-        if (direct) return direct;
+    // Narrowest fields first. A reverse geocode reports both the precise
+    // neighbourhood and the broad administrative district it sits inside —
+    // e.g. an FB Area Block 15 address also carries city_district
+    // "Nazimabad District". Mashing those into one string let the district
+    // win, so the whole of Federal B Area was being sold as Nazimabad.
+    // Each tier is searched on its own and only falls through if it finds
+    // nothing; display_name is last because it contains every level at once.
+    function addressFieldTiers(address, displayName) {
+        return [
+            [address.neighbourhood, address.quarter, address.residential],
+            [address.suburb],
+            [address.city_district, address.town, address.county],
+            [displayName]
+        ].map(tier => tier.filter(Boolean).join(' ').toLowerCase()).filter(Boolean);
+    }
 
+    // Longest alias first, so "North Nazimabad" is never claimed by the
+    // shorter "Nazimabad" that is a substring of it.
+    const AREA_MATCHERS = KARACHI_AREAS
+        .reduce(function (acc, area) {
+            const aliases = [area.name.toLowerCase()].concat(AREA_ALIASES[area.name] || []);
+            aliases.forEach(alias => acc.push({ area: area, alias: alias }));
+            return acc;
+        }, [])
+        .sort((a, b) => b.alias.length - a.alias.length);
+
+    // DHA/Defence rarely appears as a clean "DHA Phase N" string, so it gets
+    // a pattern of its own once plain alias matching has come up empty.
+    function matchDhaFallback(haystack) {
         const phaseMatch = haystack.match(/(?:dha|defence)[^\d]{0,20}(\d)/);
         if (phaseMatch) {
             const byPhase = KARACHI_AREAS.find(a => a.name === `DHA Phase ${phaseMatch[1]}`);
@@ -374,8 +399,18 @@ $(document).ready(function () {
         if (/dha|defence/.test(haystack)) {
             return KARACHI_AREAS.find(a => a.name === 'Defence View') || null;
         }
-
         return null;
+    }
+
+    function matchAreaFromAddress(address, displayName) {
+        const tiers = addressFieldTiers(address, displayName);
+
+        for (const haystack of tiers) {
+            const hit = AREA_MATCHERS.find(m => haystack.includes(m.alias));
+            if (hit) return hit.area;
+        }
+
+        return matchDhaFallback(tiers.join(' '));
     }
 
     function isRoughlyInKarachi(lat, lng) {
