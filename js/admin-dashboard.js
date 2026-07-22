@@ -795,27 +795,75 @@
   const LOGO_BUCKET = 'shop-assets';
   const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
+  // What was last loaded or saved. The save bar compares against this so
+  // it only appears when something has genuinely been edited, rather than
+  // on every keystroke or on a value typed back to what it already was.
+  let settingsSnapshot = {};
+
+  function readSettingsForm() {
+    const out = {};
+    Object.entries(SETTINGS_FIELDS).forEach(([column, inputId]) => {
+      const el = document.getElementById(inputId);
+      out[column] = el ? el.value.trim() : '';
+    });
+    return out;
+  }
+
+  function writeSettingsForm(values) {
+    Object.entries(SETTINGS_FIELDS).forEach(([column, inputId]) => {
+      const el = document.getElementById(inputId);
+      if (el) el.value = values[column] == null ? '' : values[column];
+    });
+    updateLogoPreview(values.logo_url);
+  }
+
+  function isSettingsDirty() {
+    const now = readSettingsForm();
+    return Object.keys(now).some(k => now[k] !== (settingsSnapshot[k] ?? ''));
+  }
+
+  function refreshSaveBar() {
+    document.getElementById('settingsSaveBar')
+      ?.classList.toggle('is-visible', isSettingsDirty());
+  }
+
+  Object.values(SETTINGS_FIELDS).forEach(inputId => {
+    document.getElementById(inputId)?.addEventListener('input', refreshSaveBar);
+  });
+
+  document.getElementById('discardSettingsBtn')?.addEventListener('click', () => {
+    writeSettingsForm(settingsSnapshot);
+    refreshSaveBar();
+    showToast('Changes discarded', 'success');
+  });
+
   async function loadSettings() {
     const { data, error } = await supabaseClient
       .from('shop_settings').select('*').eq('id', 1).maybeSingle();
 
     if (error || !data) {
-      showToast('Failed to load settings', 'error');
+      showToast('Failed to load settings — has shop-settings.sql been run?', 'error');
       return;
     }
 
-    Object.entries(SETTINGS_FIELDS).forEach(([column, inputId]) => {
-      const el = document.getElementById(inputId);
-      if (el) el.value = data[column] == null ? '' : data[column];
-    });
-    updateLogoPreview(data.logo_url);
+    writeSettingsForm(data);
+    settingsSnapshot = readSettingsForm();
+    refreshSaveBar();
   }
+
+  const LOGO_FALLBACK = 'img/brewbeans-logo.png';
 
   function updateLogoPreview(url) {
     const img = document.getElementById('setLogoPreview');
     if (!img) return;
-    img.src = url || 'img/brewbeans-logo.png';
-    img.onerror = () => { img.src = 'img/brewbeans-logo.png'; };
+    // The fallback is itself an image that can fail; without this guard a
+    // bad path retriggers onerror against the same src forever and the
+    // preview just sits broken.
+    img.onerror = () => {
+      img.onerror = null;
+      if (img.getAttribute('src') !== LOGO_FALLBACK) img.src = LOGO_FALLBACK;
+    };
+    img.src = url || LOGO_FALLBACK;
   }
 
   document.getElementById('setLogoUrl')?.addEventListener('input', function () {
@@ -848,26 +896,59 @@
     return data ? data.publicUrl : null;
   }
 
-  document.getElementById('setLogoFile')?.addEventListener('change', async function () {
-    const file = this.files && this.files[0];
+  async function handleLogoFile(file) {
     if (!file) return;
+    if (!/^image\//.test(file.type)) {
+      showToast('That is not an image file', 'error');
+      return;
+    }
 
-    const btn = document.getElementById('saveSettingsBtn');
-    if (btn) { btn.disabled = true; btn.textContent = 'Uploading...'; }
+    const zone = document.getElementById('logoDropzone');
+    const label = zone?.querySelector('strong');
+    const originalLabel = label ? label.textContent : '';
+    zone?.classList.add('is-busy');
+    if (label) label.textContent = 'Uploading...';
 
     const url = await uploadLogo(file);
 
-    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
-    this.value = ''; // let the same file be picked again after a failure
+    zone?.classList.remove('is-busy');
+    if (label) label.textContent = originalLabel;
+    const input = document.getElementById('setLogoFile');
+    if (input) input.value = ''; // let the same file be picked again after a failure
 
     if (!url) return;
     document.getElementById('setLogoUrl').value = url;
     updateLogoPreview(url);
+    refreshSaveBar();
     showToast('Logo uploaded — press Save Changes to apply it', 'success');
+  }
+
+  document.getElementById('setLogoFile')?.addEventListener('change', function () {
+    handleLogoFile(this.files && this.files[0]);
   });
 
+  (function wireLogoDropzone() {
+    const zone = document.getElementById('logoDropzone');
+    if (!zone) return;
+
+    // Without preventDefault on both, the browser navigates away to the
+    // dropped file instead of handing it over.
+    ['dragenter', 'dragover'].forEach(evt => zone.addEventListener(evt, e => {
+      e.preventDefault();
+      zone.classList.add('is-dragging');
+    }));
+
+    ['dragleave', 'drop'].forEach(evt => zone.addEventListener(evt, e => {
+      e.preventDefault();
+      zone.classList.remove('is-dragging');
+    }));
+
+    zone.addEventListener('drop', e => {
+      handleLogoFile(e.dataTransfer && e.dataTransfer.files[0]);
+    });
+  })();
+
   async function saveSettings() {
-    const btn = document.getElementById('saveSettingsBtn');
     const payload = {};
 
     Object.entries(SETTINGS_FIELDS).forEach(([column, inputId]) => {
@@ -896,12 +977,47 @@
     payload.currency_code = payload.currency_code || 'PKR';
     payload.currency_symbol = payload.currency_symbol || 'Rs.';
 
-    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+    setSaveBtnState('saving');
     const { error } = await supabaseClient.from('shop_settings').update(payload).eq('id', 1);
-    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
 
-    if (error) { showToast('Failed to save settings', 'error'); return; }
+    if (error) {
+      setSaveBtnState('idle');
+      showToast('Failed to save settings', 'error');
+      return;
+    }
+
+    // Reflect the values actually written — a blank currency box was
+    // filled with its default above, and leaving the form showing blank
+    // would make it disagree with the DB until the next reload.
+    writeSettingsForm(payload);
+
+    // The snapshot moves to what was just written, so the bar drops away
+    // and re-editing a field brings it straight back.
+    settingsSnapshot = readSettingsForm();
+    setSaveBtnState('saved');
     showToast('Settings saved!', 'success');
+    setTimeout(() => { setSaveBtnState('idle'); refreshSaveBar(); }, 900);
+  }
+
+  function setSaveBtnState(state) {
+    const btn = document.getElementById('saveSettingsBtn');
+    if (!btn) return;
+    const icon = btn.querySelector('i, .spinner');
+    const text = btn.querySelector('span');
+
+    if (state === 'saving') {
+      btn.disabled = true;
+      if (icon) icon.outerHTML = '<span class="spinner"></span>';
+      if (text) text.textContent = 'Saving...';
+    } else if (state === 'saved') {
+      btn.disabled = true;
+      if (icon) icon.outerHTML = '<i class="bi bi-check-circle-fill"></i>';
+      if (text) text.textContent = 'Saved';
+    } else {
+      btn.disabled = false;
+      if (icon) icon.outerHTML = '<i class="bi bi-check-lg"></i>';
+      if (text) text.textContent = 'Save Changes';
+    }
   }
 
   async function saveHours() {
