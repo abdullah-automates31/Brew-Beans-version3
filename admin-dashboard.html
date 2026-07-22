@@ -1415,8 +1415,16 @@
     .inv-stat.low  .inv-stat-icon { background: rgba(180,136,27,0.14); color: #B4881B; }
     .inv-stat.out  .inv-stat-icon { background: rgba(220,38,38,0.12);  color: #DC2626; }
 
-    .inv-stat-value { font-size: 1.35rem; font-weight: 700; line-height: 1.1; color: var(--text-dark); }
-    .inv-stat-label { font-size: 0.78rem; color: var(--text-light); }
+    /* Both were inline spans, so the count and its label ran together as
+       "10In stock". */
+    .inv-stat-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .inv-stat-value { font-size: 1.35rem; font-weight: 700; line-height: 1.15; color: var(--text-dark); }
+    .inv-stat-label { font-size: 0.78rem; line-height: 1.3; color: var(--text-light); }
 
     .inv-header-actions {
       display: flex;

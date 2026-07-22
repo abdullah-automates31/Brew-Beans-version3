@@ -828,15 +828,15 @@
       el.innerHTML = `
         <div class="inv-stat ok">
           <span class="inv-stat-icon"><i class="bi bi-check-circle-fill"></i></span>
-          <span><span class="inv-stat-value">${counts.ok}</span><span class="inv-stat-label">In stock</span></span>
+          <span class="inv-stat-text"><span class="inv-stat-value">${counts.ok}</span><span class="inv-stat-label">In stock</span></span>
         </div>
         <div class="inv-stat low">
           <span class="inv-stat-icon"><i class="bi bi-exclamation-triangle-fill"></i></span>
-          <span><span class="inv-stat-value">${counts.low}</span><span class="inv-stat-label">Running low</span></span>
+          <span class="inv-stat-text"><span class="inv-stat-value">${counts.low}</span><span class="inv-stat-label">Running low</span></span>
         </div>
         <div class="inv-stat out">
           <span class="inv-stat-icon"><i class="bi bi-x-circle-fill"></i></span>
-          <span><span class="inv-stat-value">${counts.out}</span><span class="inv-stat-label">Out of stock</span></span>
+          <span class="inv-stat-text"><span class="inv-stat-value">${counts.out}</span><span class="inv-stat-label">Out of stock</span></span>
         </div>`;
     }
 
