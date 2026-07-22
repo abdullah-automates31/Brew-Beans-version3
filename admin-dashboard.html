@@ -418,20 +418,12 @@
       border-bottom: 1px solid var(--border);
     }
 
-    .orders-toolbar-top {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      min-width: 0;
-    }
-
     /* The tabs scroll on a single line rather than wrapping. Four pills that
        break after the third — leaving "Cancelled" orphaned on its own row —
        is what made the narrow layout look ragged. */
     .filter-tabs {
       display: flex;
       gap: 0.4rem;
-      flex: 1 1 auto;
       min-width: 0;
       overflow-x: auto;
       scrollbar-width: none;
@@ -1360,15 +1352,6 @@
       transition: background 0.2s;
     }
     .adv-clear-btn:hover { background: rgba(46,139,87,0.08); }
-    .btn-bulk-select {
-      flex: 0 0 auto; white-space: nowrap; min-height: 36px;
-      padding: 0.4rem 0.9rem; border: 1.5px solid var(--border);
-      background: white; border-radius: 20px; font-size: 0.82rem;
-      font-family: inherit; cursor: pointer; color: var(--text-medium);
-      display: flex; align-items: center; gap: 0.35rem; transition: 0.2s;
-    }
-    .btn-bulk-select.active { background: var(--primary); color: white; border-color: var(--primary); }
-    .btn-bulk-select:hover:not(.active) { border-color: var(--secondary); color: var(--secondary); }
 
     /* ── BULK SELECT MODE ── */
     .order-card.selectable { cursor: default !important; }
@@ -1603,8 +1586,7 @@
          evenly, so the two dates line up and the two selects line up
          instead of breaking wherever they happen to run out of space. */
       .orders-toolbar { padding: 0.85rem 1rem; }
-      .orders-toolbar-top { gap: 0.5rem; }
-      .filter-btn, .btn-bulk-select { min-height: 40px; }
+      .filter-btn { min-height: 40px; }
       .advanced-filters { gap: 0.85rem; }
       .adv-group { flex: 1 1 100%; max-width: none; }
       .adv-clear-btn {
@@ -2321,14 +2303,11 @@
 
       <div class="card">
         <div class="orders-toolbar">
-          <div class="orders-toolbar-top">
-            <div class="filter-tabs">
-              <button class="filter-btn active" data-filter="active">Active</button>
-              <button class="filter-btn" data-filter="all">All Orders</button>
-              <button class="filter-btn" data-filter="delivered">Delivered</button>
-              <button class="filter-btn" data-filter="cancelled">Cancelled</button>
-            </div>
-            <button class="btn-bulk-select" id="bulkSelectBtn"><i class="bi bi-check2-square"></i> Select</button>
+          <div class="filter-tabs">
+            <button class="filter-btn active" data-filter="active">Active</button>
+            <button class="filter-btn" data-filter="all">All Orders</button>
+            <button class="filter-btn" data-filter="delivered">Delivered</button>
+            <button class="filter-btn" data-filter="cancelled">Cancelled</button>
           </div>
 
           <div class="search-input-wrap">
