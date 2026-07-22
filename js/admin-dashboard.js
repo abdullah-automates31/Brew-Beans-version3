@@ -860,8 +860,20 @@
       const status = ingredientStatus(i);
       if (invFilter === 'low' && status !== 'low') return false;
       if (invFilter === 'out' && status !== 'out') return false;
-      return !q || i.name.toLowerCase().includes(q);
+      if (!q) return true;
+      // Unit is searchable too, so "kg" pulls up everything weighed —
+      // useful when checking a delivery against a docket.
+      return i.name.toLowerCase().includes(q) || i.unit.toLowerCase() === q;
     });
+
+    // Only worth showing once the list is actually being narrowed.
+    const countEl = document.getElementById('invResultCount');
+    if (countEl) {
+      const narrowed = q || invFilter !== 'all';
+      countEl.textContent = narrowed ? `${rows.length} of ${allIngredients.length}` : '';
+    }
+
+    document.getElementById('invSearchClear')?.toggleAttribute('hidden', !q);
 
     if (!allIngredients.length) {
       el.innerHTML = '<div class="empty-state"><i class="bi bi-box-seam"></i><p>No ingredients yet — add your first one</p></div>';
@@ -1829,6 +1841,22 @@
     document.getElementById('ingSaveBtn')?.addEventListener('click', saveIngredient);
     document.getElementById('stockSaveBtn')?.addEventListener('click', saveStock);
     document.getElementById('invSearch')?.addEventListener('input', renderInventory);
+
+    document.getElementById('invSearchClear')?.addEventListener('click', () => {
+      const input = document.getElementById('invSearch');
+      input.value = '';
+      input.focus();
+      renderInventory();
+    });
+
+    document.getElementById('invSearch')?.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && e.currentTarget.value) {
+        e.preventDefault();
+        e.stopPropagation(); // otherwise the global Escape handler also fires
+        e.currentTarget.value = '';
+        renderInventory();
+      }
+    });
 
     document.getElementById('invFilters')?.addEventListener('click', e => {
       const btn = e.target.closest('[data-inv-filter]');

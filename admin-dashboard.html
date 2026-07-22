@@ -1426,6 +1426,34 @@
     .inv-stat-value { font-size: 1.35rem; font-weight: 700; line-height: 1.15; color: var(--text-dark); }
     .inv-stat-label { font-size: 0.78rem; line-height: 1.3; color: var(--text-light); }
 
+    .inv-search-clear {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+      margin-left: -0.2rem;
+      border: none;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--text-light);
+      font-size: 0.65rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .inv-search-clear:hover { background: var(--border); color: var(--text-dark); }
+    .inv-search-clear[hidden] { display: none; }
+
+    .inv-result-count {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      white-space: nowrap;
+    }
+
+    .inv-result-count:empty { display: none; }
+
     .inv-header-actions {
       display: flex;
       align-items: center;
@@ -2109,9 +2137,11 @@
 
       <div class="menu-page-header">
         <div class="menu-search-wrap">
-          <i class="bi bi-search"></i>
-          <input type="search" id="invSearch" placeholder="Search ingredients...">
+          <i class="bi bi-search menu-search-icon"></i>
+          <input type="text" id="invSearch" class="menu-search-input" placeholder="Search ingredients..." aria-label="Search ingredients">
+          <button type="button" class="inv-search-clear" id="invSearchClear" aria-label="Clear search" hidden><i class="bi bi-x-lg"></i></button>
         </div>
+        <span class="inv-result-count" id="invResultCount" aria-live="polite"></span>
         <div class="inv-header-actions">
           <div class="inv-filters" id="invFilters" role="group" aria-label="Filter by status">
             <button type="button" class="inv-filter active" data-inv-filter="all">All</button>
