@@ -1378,6 +1378,253 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
+    /* ── INVENTORY ── */
+    .inv-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .inv-stat {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 1rem 1.15rem;
+      background: white;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      animation: settingsCardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .inv-stat:nth-child(2) { animation-delay: 0.06s; }
+    .inv-stat:nth-child(3) { animation-delay: 0.12s; }
+
+    .inv-stat-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      font-size: 1.15rem;
+      flex: 0 0 auto;
+    }
+
+    .inv-stat.ok   .inv-stat-icon { background: rgba(46,139,87,0.12);  color: var(--secondary); }
+    .inv-stat.low  .inv-stat-icon { background: rgba(180,136,27,0.14); color: #B4881B; }
+    .inv-stat.out  .inv-stat-icon { background: rgba(220,38,38,0.12);  color: #DC2626; }
+
+    .inv-stat-value { font-size: 1.35rem; font-weight: 700; line-height: 1.1; color: var(--text-dark); }
+    .inv-stat-label { font-size: 0.78rem; color: var(--text-light); }
+
+    .inv-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .inv-filters {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.25rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+    }
+
+    .inv-filter {
+      padding: 0.4rem 0.95rem;
+      border: none;
+      border-radius: 50px;
+      background: transparent;
+      font-family: var(--font-primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-light);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .inv-filter:hover { color: var(--text-dark); }
+    .inv-filter.active { background: var(--primary); color: #fff; }
+
+    .inv-table { width: 100%; border-collapse: collapse; }
+
+    .inv-table th {
+      padding: 0.85rem 1.25rem;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-light);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .inv-table td {
+      padding: 0.9rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+      vertical-align: middle;
+    }
+
+    .inv-table tbody tr { transition: background 0.15s ease; }
+    .inv-table tbody tr:hover { background: #FAFBFC; }
+    .inv-table tbody tr:last-child td { border-bottom: none; }
+
+    .inv-name { font-weight: 600; color: var(--text-dark); }
+
+    .inv-stock { font-weight: 700; font-variant-numeric: tabular-nums; }
+    .inv-num { font-variant-numeric: tabular-nums; color: var(--text-medium); }
+
+    .inv-unit {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-medium);
+    }
+
+    /* Status carries a dot as well as a colour, so it does not rely on
+       colour alone to be readable. */
+    .inv-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.28rem 0.7rem;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .inv-status::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .inv-status.ok  { background: rgba(46,139,87,0.12);  color: #1F6B41; }
+    .inv-status.low { background: rgba(180,136,27,0.16); color: #8A6810; }
+    .inv-status.out { background: rgba(220,38,38,0.12);  color: #B91C1C; }
+
+    .inv-actions {
+      display: flex;
+      gap: 0.35rem;
+      justify-content: flex-end;
+      white-space: nowrap;
+    }
+
+    .btn-stock {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.8rem;
+      border: 1.5px solid var(--secondary);
+      border-radius: 50px;
+      background: transparent;
+      color: var(--secondary);
+      font-family: var(--font-primary);
+      font-size: 0.76rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-stock:hover { background: var(--secondary); color: #fff; }
+
+    /* Cards below the table breakpoint. A six-column table cannot shrink
+       into a phone without either a horizontal scroll or unreadable
+       columns, so each row becomes its own card with the header text
+       supplied by the ::before on each cell. */
+    @media (max-width: 860px) {
+      .inv-table thead { display: none; }
+      .inv-table, .inv-table tbody, .inv-table tr, .inv-table td { display: block; width: 100%; }
+
+      .inv-table tr {
+        padding: 0.35rem 0;
+        border-bottom: 8px solid var(--bg);
+      }
+
+      .inv-table td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        border-bottom: none;
+        padding: 0.45rem 1.25rem;
+      }
+
+      .inv-table td::before {
+        content: attr(data-label);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--text-light);
+      }
+
+      .inv-table td.inv-name-cell {
+        padding-top: 0.9rem;
+        font-size: 1rem;
+      }
+
+      .inv-table td.inv-name-cell::before { content: none; }
+
+      .inv-actions { justify-content: stretch; width: 100%; }
+      .inv-actions .btn-stock { flex: 1; justify-content: center; }
+    }
+
+    /* ── ADD STOCK MODAL ── */
+    .stock-target {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 0.85rem 1rem;
+      background: var(--bg);
+      border-radius: var(--radius);
+    }
+
+    .stock-target-name { font-weight: 700; color: var(--text-dark); }
+    .stock-target-current { font-size: 0.82rem; color: var(--text-light); }
+    .stock-target-current strong { color: var(--text-dark); font-variant-numeric: tabular-nums; }
+
+    .stock-input-row { display: flex; align-items: center; gap: 0.6rem; }
+    .stock-input-row .form-input { flex: 1; }
+
+    .stock-unit {
+      padding: 0.5rem 0.85rem;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-medium);
+    }
+
+    .stock-preview {
+      margin-top: 0.9rem;
+      padding: 0.7rem 1rem;
+      background: rgba(46,139,87,0.09);
+      border: 1px solid rgba(46,139,87,0.25);
+      border-radius: var(--radius);
+      font-size: 0.85rem;
+      color: var(--text-medium);
+    }
+
+    .stock-preview strong { color: var(--secondary); font-variant-numeric: tabular-nums; }
+    .stock-preview[hidden] { display: none; }
+
     /* ── SETTINGS ── */
 
     /* Cards rise in one after another so the eye is led down the page
@@ -1665,6 +1912,10 @@
     <button class="nav-item" data-page="addons">
       <i class="bi bi-tags"></i> Add-ons
     </button>
+    <button class="nav-item" data-page="inventory">
+      <i class="bi bi-box-seam"></i> Inventory
+      <span class="nav-badge" id="lowStockBadge">0</span>
+    </button>
     <button class="nav-item" data-page="staff">
       <i class="bi bi-people"></i> Staff PINs
     </button>
@@ -1844,6 +2095,32 @@
       </div>
     </div>
 
+    <!-- INVENTORY PAGE -->
+    <div class="page" id="page-inventory">
+      <div class="inv-summary" id="invSummary"></div>
+
+      <div class="menu-page-header">
+        <div class="menu-search-wrap">
+          <i class="bi bi-search"></i>
+          <input type="search" id="invSearch" placeholder="Search ingredients...">
+        </div>
+        <div class="inv-header-actions">
+          <div class="inv-filters" id="invFilters" role="group" aria-label="Filter by status">
+            <button type="button" class="inv-filter active" data-inv-filter="all">All</button>
+            <button type="button" class="inv-filter" data-inv-filter="low">Low</button>
+            <button type="button" class="inv-filter" data-inv-filter="out">Out</button>
+          </div>
+          <button class="btn-add" id="addIngredientBtn"><i class="bi bi-plus-lg"></i> Add Ingredient</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="inventoryList">
+          <div class="loading-spinner"><div class="spinner-ring"></div><p>Loading inventory...</p></div>
+        </div>
+      </div>
+    </div>
+
     <!-- SETTINGS PAGE -->
     <div class="page" id="page-settings">
       <div class="card settings-card">
@@ -1999,6 +2276,78 @@
     </div>
 
     <!-- Add/Edit Staff Modal -->
+    <!-- INGREDIENT MODAL (add / edit) -->
+    <div class="modal-overlay" id="ingredientModal">
+      <div class="modal" style="max-width:520px">
+        <div class="modal-header">
+          <h3 id="ingredientModalTitle">Add Ingredient</h3>
+          <button class="modal-close"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label" for="ingName">Ingredient Name</label>
+            <input type="text" id="ingName" class="form-input" placeholder="e.g. Milk" maxlength="60">
+          </div>
+          <div class="settings-grid" style="margin-top:1rem">
+            <div class="form-group">
+              <label class="form-label" for="ingStock">Current Stock</label>
+              <input type="number" id="ingStock" class="form-input" placeholder="0" min="0" step="0.001" inputmode="decimal">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ingUnit">Unit</label>
+              <select id="ingUnit" class="form-select">
+                <option value="pcs">pcs — pieces</option>
+                <option value="L">L — litres</option>
+                <option value="ml">ml — millilitres</option>
+                <option value="Kg">Kg — kilograms</option>
+                <option value="g">g — grams</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="ingMin">Minimum Stock</label>
+              <input type="number" id="ingMin" class="form-input" placeholder="0" min="0" step="0.001" inputmode="decimal">
+              <p class="settings-hint">Flags the ingredient as Low Stock at or below this level.</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal close">Cancel</button>
+          <button class="btn-modal next" id="ingSaveBtn">Save</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADD STOCK MODAL -->
+    <div class="modal-overlay" id="stockModal">
+      <div class="modal" style="max-width:440px">
+        <div class="modal-header">
+          <h3>Add Stock</h3>
+          <button class="modal-close"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="modal-body">
+          <div class="stock-target">
+            <span class="stock-target-name" id="stockIngName">Ingredient</span>
+            <span class="stock-target-current">Currently <strong id="stockIngCurrent">0</strong></span>
+          </div>
+          <div class="form-group" style="margin-top:1.1rem">
+            <label class="form-label" for="stockAmount">Amount to add</label>
+            <div class="stock-input-row">
+              <input type="number" id="stockAmount" class="form-input" placeholder="0" min="0" step="0.001" inputmode="decimal">
+              <span class="stock-unit" id="stockUnitLabel">pcs</span>
+            </div>
+            <p class="settings-hint">Use a negative number to correct an over-count.</p>
+          </div>
+          <div class="stock-preview" id="stockPreview" hidden>
+            New level: <strong id="stockPreviewValue">0</strong>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-modal close">Cancel</button>
+          <button class="btn-modal next" id="stockSaveBtn">Add Stock</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal-overlay" id="staffModal">
       <div class="modal" style="max-width:420px">
         <div class="modal-header">

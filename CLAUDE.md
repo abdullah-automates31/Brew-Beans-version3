@@ -49,6 +49,8 @@ Bootstrap JS → jQuery 3.7.1 → AOS 2.3.4 → Supabase JS v2 → `supabase-con
 
 **Menu data** lives in `js/main.js` as a hardcoded `menuItems` array (16 products with id, name, category, description, price, image). Changes to the menu require editing this array. The `menu-seed.sql` file can reseed the `menu_items` DB table if needed.
 
+**Inventory** lives in the `ingredients` table, managed under Inventory in the admin portal (`supabase/inventory.sql` creates it). Stock **status is derived, never stored** — `<= 0` is Out of Stock, `<= min_stock` is Low Stock, otherwise In Stock — so there is no second copy of the truth to keep in sync. Name uniqueness is enforced case-insensitively via a `lower(name)` index, since "Milk" and "milk" splitting one ingredient's stock across two rows is the obvious failure. **Recipe deduction is not implemented**: stock only moves when someone edits it in the portal.
+
 **Shop settings** (name, logo, phone, WhatsApp, email, address, Google Maps link, social URLs, tax %, currency) live in the single-row `shop_settings` table, edited under Settings in the admin portal. Run `supabase/shop-settings.sql` once to create the table, its **grants**, RLS policies and the public `shop-assets` storage bucket used for logo uploads. The grants matter: RLS decides which *rows* a role may touch but does not grant access to the table, and a table created from the SQL editor starts with none — without `grant select ... to anon` every public read fails with `42501` before any policy is consulted.
 
 `index.html` keeps the real values hardcoded in the markup and overwrites them at runtime from the DB, so crawlers and a failed fetch both still get a complete page. Elements opt in via `data-shop-*` attributes (`-text`, `-href`, `-src`, `-alt`, `-tel`, `-mailto`, `-whatsapp`, `-social`, `-phone-text`) handled by `applyShopSettings()` in `js/main.js` — wiring a new field is a markup change, not a JS one. A `data-shop-social` element hides itself when its URL is empty. **Uploaded logos are served from Supabase Storage, so that origin must stay in the CSP `img-src`.**
@@ -102,6 +104,7 @@ Bootstrap JS → jQuery 3.7.1 → AOS 2.3.4 → Supabase JS v2 → `supabase-con
 | `order_item_addons` | Addon selections per line item (addon_name, addon_price snapshots) |
 | `staff_pins` | Staff PINs (name, pin 4–6 digits, is_active) |
 | `business_hours` | Open/close times per day of week, is_closed flag |
+| `ingredients` | Inventory: name, current_stock, unit (`L`/`ml`/`Kg`/`g`/`pcs`), min_stock. Authenticated-only — **no anon grant**, stock levels are internal. |
 | `shop_settings` | Single row (`id = 1`): shop name, logo, contact details, maps link, social URLs, tax %, currency. Public read, authenticated write. |
 
 ## CSS

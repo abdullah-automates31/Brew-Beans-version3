@@ -477,6 +477,7 @@
     menu:   ['Menu', 'Manage your menu items'],
     hours:  ['Business Hours', 'Set your opening hours'],
     addons:    ['Add-ons', 'Manage addon groups and options'],
+    inventory: ['Inventory', 'Track ingredient stock levels'],
     staff:     ['Staff PINs', 'Manage staff access'],
     analytics: ['Analytics', 'Sales overview and insights'],
     settings:  ['Settings', 'Shop details shown across the website'],
@@ -498,6 +499,7 @@
     if (page === 'menu') loadMenu();
     if (page === 'hours') loadHours();
     if (page === 'addons') loadAddonGroups();
+    if (page === 'inventory') loadInventory();
     if (page === 'staff') loadStaff();
     if (page === 'analytics') loadAnalytics();
     if (page === 'settings') loadSettings();
@@ -770,6 +772,285 @@
     const row = document.getElementById('hours-row-' + day);
     if (isClosed) row.classList.add('is-closed');
     else row.classList.remove('is-closed');
+  }
+
+  // ── INVENTORY ──
+  // Ingredients and their stock levels. Recipe deduction is not part of
+  // this: stock only moves when someone edits it here.
+  let allIngredients = [];
+  let editingIngredientId = null;
+  let stockTargetId = null;
+  let invFilter = 'all';
+
+  const INV_UNITS = ['pcs', 'L', 'ml', 'Kg', 'g'];
+
+  // Derived, never stored — a stored copy would be one more thing to keep
+  // in sync with every stock change.
+  function ingredientStatus(ing) {
+    const stock = Number(ing.current_stock) || 0;
+    const min = Number(ing.min_stock) || 0;
+    if (stock <= 0) return 'out';
+    if (stock <= min) return 'low';
+    return 'ok';
+  }
+
+  const INV_STATUS_LABEL = { ok: 'In Stock', low: 'Low Stock', out: 'Out of Stock' };
+
+  // Stock is numeric(12,3); showing "25.000 L" is noise, so trailing
+  // zeroes are dropped while genuine decimals are kept.
+  function fmtQty(n) {
+    const num = Number(n) || 0;
+    return String(parseFloat(num.toFixed(3)));
+  }
+
+  async function loadInventory() {
+    const el = document.getElementById('inventoryList');
+    el.innerHTML = '<div class="loading-spinner"><div class="spinner-ring"></div><p>Loading inventory...</p></div>';
+
+    const { data, error } = await supabaseClient
+      .from('ingredients').select('*').order('name');
+
+    if (error) {
+      el.innerHTML = '<div style="padding:1.5rem;color:var(--text-light)">Failed to load inventory — has supabase/inventory.sql been run?</div>';
+      return;
+    }
+
+    allIngredients = data || [];
+    renderInventory();
+  }
+
+  function renderInventorySummary() {
+    const counts = { ok: 0, low: 0, out: 0 };
+    allIngredients.forEach(i => { counts[ingredientStatus(i)]++; });
+
+    const el = document.getElementById('invSummary');
+    if (el) {
+      el.innerHTML = `
+        <div class="inv-stat ok">
+          <span class="inv-stat-icon"><i class="bi bi-check-circle-fill"></i></span>
+          <span><span class="inv-stat-value">${counts.ok}</span><span class="inv-stat-label">In stock</span></span>
+        </div>
+        <div class="inv-stat low">
+          <span class="inv-stat-icon"><i class="bi bi-exclamation-triangle-fill"></i></span>
+          <span><span class="inv-stat-value">${counts.low}</span><span class="inv-stat-label">Running low</span></span>
+        </div>
+        <div class="inv-stat out">
+          <span class="inv-stat-icon"><i class="bi bi-x-circle-fill"></i></span>
+          <span><span class="inv-stat-value">${counts.out}</span><span class="inv-stat-label">Out of stock</span></span>
+        </div>`;
+    }
+
+    // Anything needing attention shows on the sidebar, so it is visible
+    // without opening the page.
+    const badge = document.getElementById('lowStockBadge');
+    if (badge) {
+      const needsAttention = counts.low + counts.out;
+      badge.textContent = needsAttention;
+      badge.classList.toggle('show', needsAttention > 0);
+    }
+  }
+
+  function renderInventory() {
+    renderInventorySummary();
+
+    const el = document.getElementById('inventoryList');
+    const q = (document.getElementById('invSearch')?.value || '').trim().toLowerCase();
+
+    const rows = allIngredients.filter(i => {
+      const status = ingredientStatus(i);
+      if (invFilter === 'low' && status !== 'low') return false;
+      if (invFilter === 'out' && status !== 'out') return false;
+      return !q || i.name.toLowerCase().includes(q);
+    });
+
+    if (!allIngredients.length) {
+      el.innerHTML = '<div class="empty-state"><i class="bi bi-box-seam"></i><p>No ingredients yet — add your first one</p></div>';
+      return;
+    }
+
+    if (!rows.length) {
+      el.innerHTML = `<div class="empty-state"><i class="bi bi-search"></i><p>No ingredients match${q ? ` "${escHtml(q)}"` : ' this filter'}</p></div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>Ingredient</th>
+            <th>Current Stock</th>
+            <th>Unit</th>
+            <th>Minimum</th>
+            <th>Status</th>
+            <th style="text-align:right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(i => {
+            const status = ingredientStatus(i);
+            return `
+            <tr>
+              <td class="inv-name-cell inv-name" data-label="Ingredient">${escHtml(i.name)}</td>
+              <td class="inv-stock" data-label="Current Stock">${fmtQty(i.current_stock)}</td>
+              <td data-label="Unit"><span class="inv-unit">${escHtml(i.unit)}</span></td>
+              <td class="inv-num" data-label="Minimum">${fmtQty(i.min_stock)}</td>
+              <td data-label="Status"><span class="inv-status ${status}">${INV_STATUS_LABEL[status]}</span></td>
+              <td data-label="Actions">
+                <div class="inv-actions">
+                  <button class="btn-stock" data-action="add-stock" data-id="${i.id}"><i class="bi bi-plus-circle"></i> Add Stock</button>
+                  <button class="btn-icon" data-action="edit-ingredient" data-id="${i.id}" title="Edit"><i class="bi bi-pencil"></i></button>
+                  <button class="btn-icon danger" data-action="delete-ingredient" data-id="${i.id}" title="Delete"><i class="bi bi-trash"></i></button>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function findIngredient(id) {
+    return allIngredients.find(i => String(i.id) === String(id));
+  }
+
+  function openIngredientModal(id) {
+    const ing = id ? findIngredient(id) : null;
+    editingIngredientId = ing ? ing.id : null;
+
+    document.getElementById('ingredientModalTitle').textContent = ing ? 'Edit Ingredient' : 'Add Ingredient';
+    document.getElementById('ingName').value  = ing ? ing.name : '';
+    document.getElementById('ingStock').value = ing ? fmtQty(ing.current_stock) : '';
+    document.getElementById('ingMin').value   = ing ? fmtQty(ing.min_stock) : '';
+    document.getElementById('ingUnit').value  = ing ? ing.unit : 'pcs';
+
+    document.getElementById('ingredientModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('ingName').focus(), 60);
+  }
+
+  async function saveIngredient() {
+    const name  = document.getElementById('ingName').value.trim();
+    const unit  = document.getElementById('ingUnit').value;
+    const stock = parseFloat(document.getElementById('ingStock').value);
+    const min   = parseFloat(document.getElementById('ingMin').value);
+
+    if (!name) { showToast('Ingredient name is required', 'error'); return; }
+    if (!INV_UNITS.includes(unit)) { showToast('Pick a valid unit', 'error'); return; }
+
+    const payload = {
+      name,
+      unit,
+      current_stock: isNaN(stock) || stock < 0 ? 0 : stock,
+      min_stock: isNaN(min) || min < 0 ? 0 : min,
+    };
+
+    const btn = document.getElementById('ingSaveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    const { error } = editingIngredientId
+      ? await supabaseClient.from('ingredients').update(payload).eq('id', editingIngredientId)
+      : await supabaseClient.from('ingredients').insert(payload);
+
+    btn.disabled = false;
+    btn.textContent = 'Save';
+
+    if (error) {
+      // The unique index is on lower(name), so a duplicate is the most
+      // likely failure and deserves its own message.
+      const dupe = error.code === '23505' || /duplicate|unique/i.test(error.message || '');
+      showToast(dupe ? `"${name}" is already in the list` : 'Failed to save ingredient', 'error');
+      return;
+    }
+
+    closeIngredientModal();
+    showToast(editingIngredientId ? 'Ingredient updated' : `"${name}" added`, 'success');
+    await loadInventory();
+  }
+
+  function closeIngredientModal() {
+    document.getElementById('ingredientModal').classList.remove('show');
+    document.body.style.overflow = '';
+    editingIngredientId = null;
+  }
+
+  function openStockModal(id) {
+    const ing = findIngredient(id);
+    if (!ing) return;
+    stockTargetId = ing.id;
+
+    document.getElementById('stockIngName').textContent = ing.name;
+    document.getElementById('stockIngCurrent').textContent = `${fmtQty(ing.current_stock)} ${ing.unit}`;
+    document.getElementById('stockUnitLabel').textContent = ing.unit;
+    document.getElementById('stockAmount').value = '';
+    document.getElementById('stockPreview').hidden = true;
+
+    document.getElementById('stockModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('stockAmount').focus(), 60);
+  }
+
+  function closeStockModal() {
+    document.getElementById('stockModal').classList.remove('show');
+    document.body.style.overflow = '';
+    stockTargetId = null;
+  }
+
+  // Live preview, so the result of a correction is visible before it is
+  // committed — particularly for the negative-number case.
+  document.getElementById('stockAmount')?.addEventListener('input', function () {
+    const ing = findIngredient(stockTargetId);
+    const preview = document.getElementById('stockPreview');
+    const amount = parseFloat(this.value);
+
+    if (!ing || isNaN(amount)) { preview.hidden = true; return; }
+
+    const next = Math.max(0, (Number(ing.current_stock) || 0) + amount);
+    document.getElementById('stockPreviewValue').textContent = `${fmtQty(next)} ${ing.unit}`;
+    preview.hidden = false;
+  });
+
+  async function saveStock() {
+    const ing = findIngredient(stockTargetId);
+    if (!ing) return;
+
+    const amount = parseFloat(document.getElementById('stockAmount').value);
+    if (isNaN(amount) || amount === 0) { showToast('Enter an amount', 'error'); return; }
+
+    // The column is CHECK (current_stock >= 0), so a correction larger
+    // than what is on hand is clamped rather than rejected by the DB.
+    const next = Math.max(0, (Number(ing.current_stock) || 0) + amount);
+
+    const btn = document.getElementById('stockSaveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+
+    const { error } = await supabaseClient
+      .from('ingredients').update({ current_stock: next }).eq('id', ing.id);
+
+    btn.disabled = false;
+    btn.textContent = 'Add Stock';
+
+    if (error) { showToast('Failed to update stock', 'error'); return; }
+
+    closeStockModal();
+    showToast(`${ing.name} → ${fmtQty(next)} ${ing.unit}`, 'success');
+    await loadInventory();
+  }
+
+  function confirmDeleteIngredient(id) {
+    const ing = findIngredient(id);
+    if (!ing) return;
+
+    document.getElementById('confirmMsg').textContent =
+      `Delete "${ing.name}" from inventory? This cannot be undone.`;
+    document.getElementById('confirmYesBtn').onclick = async () => {
+      closeConfirm();
+      const { error } = await supabaseClient.from('ingredients').delete().eq('id', ing.id);
+      if (error) { showToast('Failed to delete ingredient', 'error'); return; }
+      showToast(`"${ing.name}" deleted`, 'success');
+      await loadInventory();
+    };
+    document.getElementById('confirmOverlay').classList.add('show');
   }
 
   // ── SHOP SETTINGS ──
@@ -1543,6 +1824,58 @@
     document.querySelector('#page-menu .btn-primary')?.addEventListener('click', () => openMenuModal());
 
     // Save Hours button
+    // ── Inventory ──
+    document.getElementById('addIngredientBtn')?.addEventListener('click', () => openIngredientModal(null));
+    document.getElementById('ingSaveBtn')?.addEventListener('click', saveIngredient);
+    document.getElementById('stockSaveBtn')?.addEventListener('click', saveStock);
+    document.getElementById('invSearch')?.addEventListener('input', renderInventory);
+
+    document.getElementById('invFilters')?.addEventListener('click', e => {
+      const btn = e.target.closest('[data-inv-filter]');
+      if (!btn) return;
+      invFilter = btn.dataset.invFilter;
+      document.querySelectorAll('#invFilters .inv-filter')
+        .forEach(b => b.classList.toggle('active', b === btn));
+      renderInventory();
+    });
+
+    // Delegated: the table is re-rendered on every change, so per-row
+    // listeners would have to be rebound each time.
+    document.getElementById('inventoryList')?.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const id = btn.dataset.id;
+      if (btn.dataset.action === 'add-stock')          openStockModal(id);
+      else if (btn.dataset.action === 'edit-ingredient')   openIngredientModal(id);
+      else if (btn.dataset.action === 'delete-ingredient') confirmDeleteIngredient(id);
+    });
+
+    // Backdrop click and the header/footer close buttons.
+    document.getElementById('ingredientModal')?.addEventListener('click', e => {
+      if (e.target.id === 'ingredientModal' || e.target.closest('.modal-close, .btn-modal.close')) closeIngredientModal();
+    });
+
+    document.getElementById('stockModal')?.addEventListener('click', e => {
+      if (e.target.id === 'stockModal' || e.target.closest('.modal-close, .btn-modal.close')) closeStockModal();
+    });
+
+    // Enter submits, Escape closes — expected of a small form like this.
+    ['ingName', 'ingStock', 'ingMin'].forEach(id => {
+      document.getElementById(id)?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); saveIngredient(); }
+      });
+    });
+
+    document.getElementById('stockAmount')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); saveStock(); }
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (document.getElementById('ingredientModal')?.classList.contains('show')) closeIngredientModal();
+      if (document.getElementById('stockModal')?.classList.contains('show')) closeStockModal();
+    });
+
     document.getElementById('saveHoursBtn')?.addEventListener('click', saveHours);
     document.getElementById('saveSettingsBtn')?.addEventListener('click', saveSettings);
 
