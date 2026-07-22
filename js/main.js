@@ -174,6 +174,15 @@ $(document).ready(function () {
     let locOrderType = (locState && locState.orderType) || 'delivery';
     let locSelectedArea = (locState && locState.area) || null; // { name, lat, lng }
 
+    // The customer's actual GPS fix, when they used "Use My Current
+    // Location". Kept separate from locSelectedArea because that only
+    // holds the area's approximate centroid — these precise coords are
+    // what we hand to the checkout Haversine so the delivery charge
+    // reflects where they really are, not the middle of their suburb.
+    // Cleared whenever they pick an area by hand instead.
+    let locDetectedCoords = (locState && locState.detectedCoords) || null;
+    let locIsDetecting = false;
+
     // Tag this modal's own backdrop (and only this one) so the CSS blur
     // in style.css doesn't bleed into the cart/checkout/addon modals.
     $locModal.on('show.bs.modal', function () {
@@ -229,12 +238,19 @@ $(document).ready(function () {
             return;
         }
 
-        const dist = distanceKm(SHOP_LAT, SHOP_LNG, locSelectedArea.lat, locSelectedArea.lng);
+        // Quote against the real GPS fix when we have one; the area centroid
+        // is only a stand-in for a hand-picked area.
+        const origin = locDetectedCoords || locSelectedArea;
+        const dist = distanceKm(SHOP_LAT, SHOP_LNG, origin.lat, origin.lng);
         if (dist <= DELIVERY_RADIUS_KM) {
+            const quote = getDeliveryQuote(origin.lat, origin.lng);
+            const fee = quote.deliveryCost === 0
+                ? 'Free delivery'
+                : `Delivery fee: Rs. ${quote.deliveryCost}`;
             $availability
                 .removeClass('is-unavailable')
                 .addClass('is-visible is-available')
-                .html('<i class="bi bi-check-circle-fill"></i><div><span class="loc-availability-title">Delivery Available</span>Estimated Delivery: 25–35 mins</div>');
+                .html(`<i class="bi bi-check-circle-fill"></i><div><span class="loc-availability-title">Delivery Available</span>Estimated Delivery: ${quote.deliveryTime}–${quote.deliveryTime + 10} mins &middot; ${escapeHtml(fee)}</div>`);
         } else {
             $availability
                 .removeClass('is-available')
@@ -246,7 +262,10 @@ $(document).ready(function () {
     function canContinue() {
         if (!locSelectedArea) return false;
         if (locOrderType === 'pickup') return true;
-        return distanceKm(SHOP_LAT, SHOP_LNG, locSelectedArea.lat, locSelectedArea.lng) <= DELIVERY_RADIUS_KM;
+        // Same origin as updateAvailability, so the card and the button can
+        // never disagree about whether we deliver there.
+        const origin = locDetectedCoords || locSelectedArea;
+        return distanceKm(SHOP_LAT, SHOP_LNG, origin.lat, origin.lng) <= DELIVERY_RADIUS_KM;
     }
 
     function updateContinueState() {
@@ -260,8 +279,11 @@ $(document).ready(function () {
         }
     }
 
-    function selectArea(area) {
+    // detectedCoords is only passed by the geolocation path; a manual pick
+    // omits it and so clears any stale fix from an earlier detection.
+    function selectArea(area, detectedCoords) {
         locSelectedArea = area;
+        locDetectedCoords = detectedCoords || null;
         $areaInput.val(area.name);
         closeDropdown();
         updateAvailability();
@@ -287,6 +309,9 @@ $(document).ready(function () {
         if (locSelectedArea) {
             $areaInput.val(locSelectedArea.name);
         }
+        // Stale "detected"/"failed" text from a previous visit would be
+        // misleading now, so the status line always starts clean.
+        setDetectStatus('', '');
         renderAreaDropdown('');
         updateAvailability();
         updateContinueState();
@@ -303,6 +328,8 @@ $(document).ready(function () {
 
     $areaInput.on('input', function () {
         locSelectedArea = null;
+        locDetectedCoords = null;
+        setDetectStatus('', '');
         updateAvailability();
         updateContinueState();
         renderAreaDropdown($(this).val());
@@ -332,7 +359,11 @@ $(document).ready(function () {
             displayName
         ].filter(Boolean).join(' ').toLowerCase();
 
-        const direct = KARACHI_AREAS.find(a => haystack.includes(a.name.toLowerCase()));
+        // Longest name first, so a "North Nazimabad" address doesn't get
+        // claimed by the shorter "Nazimabad" entry just because it sits
+        // earlier in the list.
+        const byLength = KARACHI_AREAS.slice().sort((a, b) => b.name.length - a.name.length);
+        const direct = byLength.find(a => haystack.includes(a.name.toLowerCase()));
         if (direct) return direct;
 
         const phaseMatch = haystack.match(/(?:dha|defence)[^\d]{0,20}(\d)/);
@@ -351,64 +382,136 @@ $(document).ready(function () {
         return lat >= 24.75 && lat <= 25.05 && lng >= 66.90 && lng <= 67.25;
     }
 
-    $useCurrentBtn.on('click', function () {
-        if (!navigator.geolocation) {
-            $detectStatus.attr('class', 'loc-detect-status is-error').text("We couldn't access your location. Please choose your area manually.");
-            return;
+    // Keyed by GeolocationPositionError.code (1 PERMISSION_DENIED,
+    // 2 POSITION_UNAVAILABLE, 3 TIMEOUT) plus our own non-numeric cases.
+    // Every branch names the manual picker as the way out, so a failure is
+    // never a dead end.
+    const GEO_ERROR_MESSAGES = {
+        1: 'Location access was blocked. Allow it in your browser settings, or pick your area below.',
+        2: "We couldn't pin down your position. Please pick your area below.",
+        3: 'Location detection timed out. Try again, or pick your area below.',
+        unsupported: "This browser can't share your location. Please pick your area below.",
+        lookup: "We couldn't look up your area just now. Please pick it below.",
+        outOfRange: 'You appear to be outside Karachi — we only deliver within the city.',
+        unmatched: "We found you, but couldn't match your area exactly — please pick it below."
+    };
+
+    function setDetectStatus(state, message) {
+        $detectStatus.attr('class', 'loc-detect-status' + (state ? ' is-' + state : ''));
+        if (state === 'success') {
+            $detectStatus.html('<i class="bi bi-check-circle-fill me-1"></i>' + escapeHtml(message));
+        } else {
+            $detectStatus.text(message);
         }
+    }
 
-        const $icon = $useCurrentBtn.find('i');
-        $icon.removeClass('bi-crosshair').addClass('bi-arrow-repeat spin');
-        $detectStatus.attr('class', 'loc-detect-status').text('Detecting your location...');
+    function setDetecting(isBusy) {
+        locIsDetecting = isBusy;
+        $useCurrentBtn.prop('disabled', isBusy);
+        $useCurrentBtn.find('i')
+            .toggleClass('bi-crosshair', !isBusy)
+            .toggleClass('bi-arrow-repeat spin', isBusy);
+    }
 
-        navigator.geolocation.getCurrentPosition(
-            function (position) {
+    // Promise wrapper around getCurrentPosition. Rejects with an Error whose
+    // message is already customer-facing, so the caller has a single catch
+    // instead of branching on error codes from two different sources.
+    function requestPosition() {
+        return new Promise(function (resolve, reject) {
+            if (!navigator.geolocation) {
+                reject(new Error(GEO_ERROR_MESSAGES.unsupported));
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(resolve, function (err) {
+                reject(new Error(GEO_ERROR_MESSAGES[err && err.code] || GEO_ERROR_MESSAGES.unsupported));
+            }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+        });
+    }
+
+    // Reverse-geocode through Nominatim and match the result to a curated
+    // area. Aborted after 8s — their public endpoint is rate-limited and can
+    // stall, and a spinner stuck forever is worse than the manual picker.
+    function reverseGeocodeArea(lat, lng) {
+        const controller = new AbortController();
+        const timer = setTimeout(function () { controller.abort(); }, 8000);
+        const url = 'https://nominatim.openstreetmap.org/reverse?format=json' +
+            `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}` +
+            '&zoom=16&addressdetails=1';
+
+        return fetch(url, { headers: { 'Accept': 'application/json' }, signal: controller.signal })
+            .then(function (res) {
+                if (!res.ok) throw new Error('reverse geocode failed');
+                return res.json();
+            })
+            .then(function (data) {
+                return matchAreaFromAddress(data.address || {}, data.display_name || '');
+            })
+            .catch(function () {
+                // Network failure, abort/timeout, or malformed JSON — all the
+                // same to the customer, so they get one message and a way out.
+                throw new Error(GEO_ERROR_MESSAGES.lookup);
+            })
+            .finally(function () {
+                clearTimeout(timer);
+            });
+    }
+
+    // Persist the precise fix under the key the checkout flow already reads,
+    // in the same {lat,lng,timestamp} shape, so a customer who detects their
+    // location gets an accurate delivery quote even if they never press
+    // Continue.
+    function persistDetectedLocation(lat, lng) {
+        userLocation = { lat: lat, lng: lng, timestamp: new Date().toISOString() };
+        safeWriteLocalStorage('brewBeansLocation', userLocation);
+    }
+
+    $useCurrentBtn.on('click', function () {
+        if (locIsDetecting) return; // ignore double-taps while a fix is pending
+
+        setDetecting(true);
+        setDetectStatus('', 'Detecting your location...');
+
+        requestPosition()
+            .then(function (position) {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-                $icon.removeClass('bi-arrow-repeat spin').addClass('bi-crosshair');
 
                 if (!isRoughlyInKarachi(lat, lng)) {
-                    $detectStatus.attr('class', 'loc-detect-status is-error').text("We couldn't find your area in Karachi. Please choose your area manually.");
-                    return;
+                    throw new Error(GEO_ERROR_MESSAGES.outOfRange);
                 }
 
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16&addressdetails=1`, {
-                    headers: { 'Accept': 'application/json' }
-                })
-                    .then(res => res.ok ? res.json() : Promise.reject(new Error('reverse geocode failed')))
-                    .then(data => {
-                        const matched = matchAreaFromAddress(data.address || {}, data.display_name || '');
-                        if (matched) {
-                            selectArea(matched);
-                            $detectStatus.attr('class', 'loc-detect-status is-success').html('<i class="bi bi-check-circle-fill me-1"></i>Location detected successfully');
-                        } else {
-                            $detectStatus.attr('class', 'loc-detect-status is-error').text("We found your area, but couldn't match it exactly — please choose it manually below.");
-                        }
-                    })
-                    .catch(function () {
-                        $detectStatus.attr('class', 'loc-detect-status is-error').text("We couldn't confirm your area. Please choose it manually.");
-                    });
-            },
-            function () {
-                $icon.removeClass('bi-arrow-repeat spin').addClass('bi-crosshair');
-                $detectStatus.attr('class', 'loc-detect-status is-error').text("We couldn't access your location. Please choose your area manually.");
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-        );
+                return reverseGeocodeArea(lat, lng).then(function (matched) {
+                    if (!matched) throw new Error(GEO_ERROR_MESSAGES.unmatched);
+
+                    selectArea(matched, { lat: lat, lng: lng });
+                    persistDetectedLocation(lat, lng);
+                    setDetectStatus('success', `Location detected — ${matched.name}`);
+                });
+            })
+            .catch(function (err) {
+                // Leave whatever the customer had already chosen intact; the
+                // availability card and Continue button are untouched here so
+                // a failed detection can't strand a valid manual pick.
+                setDetectStatus('error', (err && err.message) || GEO_ERROR_MESSAGES.lookup);
+            })
+            .then(function () {
+                setDetecting(false);
+            });
     });
 
     $continueBtn.on('click', function () {
         if (!canContinue()) return;
 
-        locState = { orderType: locOrderType, area: locSelectedArea };
+        locState = {
+            orderType: locOrderType,
+            area: locSelectedArea,
+            detectedCoords: locDetectedCoords
+        };
         safeWriteLocalStorage(LOC_STORAGE_KEY, locState);
 
-        userLocation = {
-            lat: locSelectedArea.lat,
-            lng: locSelectedArea.lng,
-            timestamp: new Date().toISOString()
-        };
-        safeWriteLocalStorage('brewBeansLocation', userLocation);
+        // Precise GPS fix wins over the area centroid when we have one.
+        const coords = locDetectedCoords || locSelectedArea;
+        persistDetectedLocation(coords.lat, coords.lng);
 
         updateNavLocationDisplay();
         locationModal.hide();
@@ -1462,10 +1565,24 @@ $(document).ready(function () {
     });
 
     // Calculate delivery estimate
-    function calculateDeliveryEstimate(lat, lng) {
+    // Pure distance/time/fee math, no DOM. Split out of
+    // calculateDeliveryEstimate so the location modal can quote the same
+    // numbers the checkout will charge instead of keeping its own copy of
+    // the tiers — change the pricing here and both surfaces follow.
+    function getDeliveryQuote(lat, lng) {
         const distance = calculateDistance(SHOP_LAT, SHOP_LNG, lat, lng);
-        const deliveryTime = Math.max(15, Math.round(distance * 3)); // ~3 min per km, min 15 min
-        const deliveryCost = distance > 5 ? Math.round(distance * 20) : (distance > 3 ? 100 : 0);
+        return {
+            distance: distance,
+            deliveryTime: Math.max(15, Math.round(distance * 3)), // ~3 min per km, min 15 min
+            deliveryCost: distance > 5 ? Math.round(distance * 20) : (distance > 3 ? 100 : 0)
+        };
+    }
+
+    function calculateDeliveryEstimate(lat, lng) {
+        const quote = getDeliveryQuote(lat, lng);
+        const distance = quote.distance;
+        const deliveryTime = quote.deliveryTime;
+        const deliveryCost = quote.deliveryCost;
 
         $('#deliveryDistance').text(`${distance.toFixed(1)} km`);
         $('#deliveryTime').text(`${deliveryTime} mins`);
