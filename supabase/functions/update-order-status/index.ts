@@ -1,32 +1,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { allowRequest, clientIp, pinAttemptsExhausted, recordFailedPin } from '../_shared/rate-limit.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-const RATE_LIMIT_WINDOW = 60_000
-const RATE_LIMIT_MAX = 10
-const attemptStore = new Map<string, { count: number; resetAt: number }>()
-
-function getClientIp(req: Request): string {
-  return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || req.headers.get('x-real-ip')
-    || 'unknown'
-}
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = attemptStore.get(ip)
-  if (!entry || now > entry.resetAt) {
-    attemptStore.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW })
-    return true
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return false
-  entry.count++
-  return true
 }
 
 interface ReqBody {
@@ -44,9 +23,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders })
   }
 
-  const ip = getClientIp(req)
-  if (!checkRateLimit(ip)) {
-    return new Response(JSON.stringify({ error: 'Too many attempts. Try again later.' }), { status: 429, headers: corsHeaders })
+  const ip = clientIp(req)
+  if (!allowRequest(ip) || pinAttemptsExhausted(ip)) {
+    return new Response(JSON.stringify({ error: 'Too many attempts. Try again in a minute.' }), { status: 429, headers: corsHeaders })
   }
 
   try {
@@ -61,12 +40,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { data: pinData, error: pinError } = await supabase
+    // Not .maybeSingle(): the RPC returns a set, and two staff sharing a
+    // PIN would make it throw instead of authenticating.
+    const { data: matches, error: pinError } = await supabase
       .rpc('verify_staff_pin', { p_pin: body.p_pin })
-      .maybeSingle()
 
     if (pinError) throw pinError
-    if (!pinData) {
+    if (!matches || matches.length === 0) {
+      recordFailedPin(ip)
       return new Response(JSON.stringify({ error: 'Invalid PIN' }), { status: 401, headers: corsHeaders })
     }
 

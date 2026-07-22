@@ -17,13 +17,22 @@
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Hash existing plaintext PINs
-UPDATE public.staff_pins SET pin = crypt(pin, gen_salt('bf'));
+-- Hash existing plaintext PINs.
+--
+-- The WHERE clause is not optional. A bcrypt hash is itself a valid input
+-- to crypt(), so re-running this without it hashes the hashes — every PIN
+-- stops working and there is nothing to recover, because the plaintext is
+-- gone. '$2a$' / '$2b$' / '$2y$' is the bcrypt prefix; rows already
+-- carrying it are done.
+UPDATE public.staff_pins
+   SET pin = crypt(pin, gen_salt('bf'))
+ WHERE pin !~ '^\$2[aby]\$';
 
 -- Trigger: auto-hash PIN on INSERT or UPDATE of pin column
 CREATE OR REPLACE FUNCTION public.hash_staff_pin()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' OR NEW.pin IS DISTINCT FROM OLD.pin THEN
@@ -44,6 +53,9 @@ DROP FUNCTION IF EXISTS public.verify_staff_pin CASCADE;
 CREATE FUNCTION public.verify_staff_pin(p_pin text)
 RETURNS TABLE(staff_id uuid)
 LANGUAGE plpgsql SECURITY DEFINER
+-- A SECURITY DEFINER function runs as its owner, so an attacker-controlled
+-- search_path could point `crypt` or `staff_pins` at objects of their own.
+SET search_path = public, pg_temp
 AS $$
 BEGIN
   RETURN QUERY
@@ -53,8 +65,15 @@ END;
 $$;
 
 ALTER FUNCTION public.verify_staff_pin(text) OWNER TO postgres;
-GRANT EXECUTE ON FUNCTION public.verify_staff_pin TO service_role;
-REVOKE EXECUTE ON FUNCTION public.verify_staff_pin FROM anon, authenticated;
+
+-- REVOKE FROM PUBLIC first, and it must be first. Postgres grants EXECUTE
+-- on every new function to PUBLIC, and anon inherits that — revoking from
+-- anon and authenticated by name leaves the PUBLIC grant untouched and the
+-- function still callable with the publishable key. That turns it into an
+-- unthrottled PIN-guessing oracle sitting behind all of the above.
+REVOKE EXECUTE ON FUNCTION public.verify_staff_pin(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.verify_staff_pin(text) FROM anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.verify_staff_pin(text) TO service_role;
 
 -- ============================================================================
 -- PART 2: Returning-Customer Orders RPC (rate-limited, SECURITY DEFINER)
@@ -63,11 +82,16 @@ REVOKE EXECUTE ON FUNCTION public.verify_staff_pin FROM anon, authenticated;
 CREATE OR REPLACE FUNCTION public.get_customer_orders(p_phone text)
 RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   result json;
 BEGIN
-  PERFORM pg_sleep(0.5);
+  -- There was a pg_sleep(0.5) here as a throttle. It is removed on purpose:
+  -- the sleep holds a pooler connection for its whole duration, so a few
+  -- hundred concurrent calls exhaust the connection pool and take the whole
+  -- site down — it cost availability to buy very little. Throttling belongs
+  -- at the edge, where it does not occupy a database connection.
   WITH limited AS (
     SELECT * FROM public.orders
     WHERE phone = p_phone
@@ -103,7 +127,16 @@ END;
 $$;
 
 ALTER FUNCTION public.get_customer_orders(text) OWNER TO postgres;
-GRANT EXECUTE ON FUNCTION public.get_customer_orders TO anon;
+REVOKE EXECUTE ON FUNCTION public.get_customer_orders(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_customer_orders(text) TO anon, authenticated;
+
+-- KNOWN EXPOSURE: this still answers "what is this phone number's name,
+-- email and order history?" for any phone number handed to it. That is
+-- unchanged from the direct table query it replaced — the win here is that
+-- anon can no longer read the orders table wholesale — but it is not least
+-- privilege. Closing it properly means asking for something only the
+-- customer holds (their last order number, or an OTP), which is a
+-- checkout-flow change, not a policy change.
 
 -- ============================================================================
 -- PART 3: Revoke anon SELECT from orders & order_items (replaced by RPC)

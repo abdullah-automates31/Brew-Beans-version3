@@ -43,32 +43,26 @@ CREATE POLICY "staff_pins authenticated all"
 -- ============================================================================
 -- SECTION 2: Secure orders table
 -- ============================================================================
--- 🔍 FINDING: `orders` has anon SELECT — anyone with the anon key can query
---    orders by any phone number (phone enumeration).
--- 🔧 FIX: Enable RLS; anon SELECT remains permissive for now (matching
---    current site behavior) but the policy is documented for future tightening.
---    RECOMMENDED: Move returning-customer lookup to an RPC.
--- ⚠️  Current site (`main.js:1951`) does orders.select(...).eq('phone', phone)
---    — this will CONTINUE to work because anon can still SELECT.
+-- 🔍 FINDING: `orders` had anon SELECT — anyone with the anon key could query
+--    orders by any phone number, or dump the table outright.
+-- 🔧 FIX: Enable RLS and give anon nothing. The returning-customer lookup
+--    now goes through the get_customer_orders RPC (see pin-hashing.sql),
+--    so the client no longer needs to touch this table at all.
+--
+-- ⚠️  DO NOT re-add a grant or policy for anon here. An earlier revision of
+--    this file kept `GRANT SELECT ... TO anon` to avoid breaking the site;
+--    that predates the RPC, and re-running it now silently undoes the
+--    revoke in pin-hashing.sql and re-opens the whole table.
 
 ALTER TABLE IF EXISTS public.orders ENABLE ROW LEVEL SECURITY;
 
 -- Explicit grants
 REVOKE ALL ON public.orders FROM anon, authenticated;
-GRANT SELECT ON public.orders TO anon;
 GRANT SELECT, UPDATE ON public.orders TO authenticated;
 -- No INSERT or DELETE to any Supabase role — writes go through service-role
 -- Edge Functions (submit-order). This is correct.
 
--- Anon: can read orders filtered by phone (current site behavior)
--- ⚠️  This is intentionally permissive to avoid breaking the site.
--- 🔒  FUTURE: Replace with RPC-based lookup and restrict this policy.
 DROP POLICY IF EXISTS "orders anon select" ON public.orders;
-CREATE POLICY "orders anon select"
-    ON public.orders
-    FOR SELECT
-    TO anon
-    USING (true);
 
 -- Authenticated (admin): full read + status updates
 DROP POLICY IF EXISTS "orders authenticated select" ON public.orders;
@@ -89,22 +83,17 @@ CREATE POLICY "orders authenticated update"
 -- ============================================================================
 -- SECTION 3: Secure order_items table
 -- ============================================================================
--- 🔍 FINDING: `order_items` has anon SELECT — linked to orders exposure.
--- 🔧 FIX: Same pattern as orders.
+-- 🔍 FINDING: `order_items` had anon SELECT — linked to the orders exposure.
+-- 🔧 FIX: Same pattern as orders — anon gets nothing, the RPC serves the
+--    returning-customer lookup. The same "do not re-add anon" warning applies.
 
 ALTER TABLE IF EXISTS public.order_items ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON public.order_items FROM anon, authenticated;
-GRANT SELECT ON public.order_items TO anon;
 GRANT SELECT ON public.order_items TO authenticated;
 -- Writes only through service-role Edge Functions.
 
 DROP POLICY IF EXISTS "order_items anon select" ON public.order_items;
-CREATE POLICY "order_items anon select"
-    ON public.order_items
-    FOR SELECT
-    TO anon
-    USING (true);
 
 DROP POLICY IF EXISTS "order_items authenticated select" ON public.order_items;
 CREATE POLICY "order_items authenticated select"
@@ -338,32 +327,33 @@ DROP FUNCTION IF EXISTS public.staff_list_orders CASCADE;
 --   enable_confirmations = false  — No email confirmation required
 --   minimum_password_length = 6  — Very weak
 --
--- 🔧 FIX: In the Supabase Dashboard (NOT config.toml — that's local dev):
---   1. Go to Authentication → Providers → Email
---   2. DISABLE "Allow new user signups" if admin accounts are managed manually
---   3. OR enable email confirmations
---   4. Set minimum password length to 8+
---   5. Consider enabling captcha
+-- ⚠️  RISK: every `authenticated` policy in this file is `USING (true)`,
+--    because the admin dashboard is the only thing that signs in. That
+--    makes "can sign up" and "is an admin" the same thing — anyone who
+--    could create an account would get the full dashboard's database
+--    access. There is no admin role to check against.
 --
--- ⚠️  RISK: If signups are enabled and RLS policies use `USING (true)` for
---    authenticated, anyone who signs up gets the same database access as the
---    admin dashboard. This is the #1 security threat.
+-- ✅ VERIFIED on the live project: /auth/v1/settings reports
+--    "disable_signup": true, so no new accounts can be created. This is
+--    what holds the whole authenticated tier up — if signups are ever
+--    re-enabled, these policies must gain a real role check first.
 --
--- ACTION REQUIRED (outside this SQL):
+-- Remaining dashboard hardening (config.toml is local dev only):
+--   • Set minimum password length to 8+
+--   • Consider enabling captcha
 --   https://supabase.com/dashboard/project/rtqbpviegxwgaknmrrsg/auth/providers
 
 -- ============================================================================
 -- SECTION 15: ⚠️  STAFF PINS — Plaintext storage
 -- ============================================================================
--- 🔍 FINDING: Staff PINs are stored and compared in plaintext.
---    The `update-order-status` Edge Function does:
---      .from('staff_pins').select('id').eq('pin', body.p_pin).eq('is_active', true)
+-- ✅ RESOLVED in supabase/pin-hashing.sql — PINs are bcrypt-hashed by a
+--    trigger and compared only through verify_staff_pin(), which is granted
+--    to service_role alone. Both Edge Functions call that RPC instead of
+--    reading the table.
 --
--- 🔧 FIX: Requires Edge Function change + RPC change. Not included in this
---    migration to avoid breaking staff login. Create a follow-up ticket:
---    "Hash staff PINs with pgcrypto + update Edge Function"
---
--- ⚠️  NOT APPLIED — requires server-side code changes.
+-- ⚠️  RUN ORDER: this file first, then pin-hashing.sql. pin-hashing.sql
+--    tightens what this file sets up; running them the other way round
+--    leaves anon holding SELECT on orders.
 
 -- ============================================================================
 -- SECTION 16: ✅  Storage bucket permissions (verification)

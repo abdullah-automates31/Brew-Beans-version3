@@ -57,7 +57,7 @@ Bootstrap JS → jQuery 3.7.1 → AOS 2.3.4 → Supabase JS v2 → `supabase-con
 
 `tax_percent` is stored and editable but is **not yet applied to order totals** — totals are recomputed server-side in `submit-order`, which is the only place a tax line may be added.
 
-**Addon system** is entirely DB-driven (not hardcoded). Addon groups (`addon_groups`), options (`addons`), and their assignment to menu items (`menu_item_addon_groups`) are fetched live from Supabase. The `submit-order` Edge Function re-validates addon prices from the DB — client-side prices for addons are ignored.
+**Addon system** is split, and the two halves disagree. The admin portal manages `addon_groups`, `addons` and `menu_item_addon_groups` in the DB, and `submit-order` re-prices every addon by **name** against the `addons` table, silently dropping any it cannot find. But `index.html` does *not* read those tables — it renders the `LOCAL_ADDON_CATALOG` constant in `js/main.js`, keyed by menu category. Any priced option in that constant with no matching `addons` row is shown to the customer with a price and then charged as zero. Adding an addon means adding it in **both** places until one side is retired.
 
 **Cart state** is persisted in `localStorage` (`brewBeansCart` key) with sanitization on read. The cart object stores items keyed by product id.
 
@@ -65,16 +65,19 @@ Bootstrap JS → jQuery 3.7.1 → AOS 2.3.4 → Supabase JS v2 → `supabase-con
 
 | Layer | Functions | Location |
 |-------|-----------|----------|
-| Edge Functions | `submit-order`, `update-order-status`, `create-payment` | `supabase/functions/*/index.ts` |
-| RPCs (read/admin) | `get_order_status`, `staff_list_orders`, `get_business_hours` | Supabase DB only |
+| Edge Functions | `submit-order`, `update-order-status`, `create-payment`, `payment-callback`, `staff-list-orders` | `supabase/functions/*/index.ts` |
+| RPCs (anon) | `get_order_status`, `get_business_hours`, `get_menu_badges`, `get_customer_orders` | Supabase DB only |
+| RPCs (service_role only) | `verify_staff_pin` | Supabase DB only |
 
-**Edge Functions** use the Supabase service-role key (`SUPABASE_SERVICE_ROLE_KEY` env) to bypass RLS. Deploy with: `supabase functions deploy <name>`.
+**Edge Functions** use the Supabase service-role key (`SUPABASE_SERVICE_ROLE_KEY` env) to bypass RLS. Deploy with: `supabase functions deploy <name>`. `_shared/` holds code imported by more than one function (`jazzcash.ts`, `rate-limit.ts`); relative `../_shared/x.ts` imports are bundled at deploy time.
 
 **Polling intervals**: staff dashboard polls every 15 s; order tracking polls every 10 s. Neither uses Supabase Realtime subscriptions.
 
 **Delivery charge** is calculated client-side using the Haversine formula against hardcoded shop coordinates (`24.9180°N, 67.0971°E`). ETA is estimated as 15 min prep + 25 min delivery (or 8 min for pickup when delivery charge = 0). Geolocation permission is requested via a modal shown 3 s after page load.
 
-**Staff authentication** is PIN-based, verified server-side via RPC, and the PIN is cached in `sessionStorage`. The page is served with `X-Robots-Tag: noindex, nofollow`.
+**Staff authentication** is PIN-based (not Supabase Auth) and the PIN is cached in `sessionStorage`. PINs are stored as bcrypt hashes — a `staff_pins_hash` trigger runs `crypt()`/`gen_salt('bf')` on insert and on any update that touches `pin`, so the admin dashboard can set a new PIN but can never reveal an existing one. Comparison happens only inside `verify_staff_pin()`, which is granted to `service_role` alone and called by the `staff-list-orders` and `update-order-status` Edge Functions. **When adding a SECURITY DEFINER function, `REVOKE EXECUTE ... FROM PUBLIC` before granting** — Postgres grants EXECUTE to PUBLIC on every new function and `anon` inherits it, so revoking from `anon` by name leaves the function wide open. The page is served with `X-Robots-Tag: noindex, nofollow`.
+
+**RLS** is enabled on every table. `anon` may read only `menu_items`, `addon_groups`, `addons`, `menu_item_addon_groups`, `business_hours` and `shop_settings`, and may write nothing anywhere; `orders`, `order_items`, `order_item_addons`, `staff_pins` and `ingredients` are closed to it entirely. All `authenticated` policies are `USING (true)`, so signing up and being an admin are the same thing — this is only safe because signups are disabled on the project. Migrations live in `supabase/security-audit.sql`, then `supabase/pin-hashing.sql`, then `supabase/security-fixes-2.sql`, **in that order**.
 
 **Phone number privacy**: the customer's phone is stored in `sessionStorage` under the key `bb_phone_${orderNumber}` so it never appears in the browser history URL when returning from a payment gateway redirect.
 

@@ -49,7 +49,7 @@ Bootstrap JS → jQuery 3.7.1 → AOS 2.3.4 → Motion 12.42.2 → Supabase JS v
 | Deploy | `supabase functions deploy <name>` |
 
 Key patterns:
-- **Addons**: DB-driven. `submit-order` re-validates addon prices server-side; client prices ignored.
+- **Addons**: split. The admin portal edits `addon_groups`/`addons`, and `submit-order` re-prices addons by name against the `addons` table (dropping unknown ones silently) — but `index.html` renders the hardcoded `LOCAL_ADDON_CATALOG` in `js/main.js`, not the DB. A priced option present only in that constant is charged as zero. Add addons in both places.
 - **Inventory** (`ingredients` table): authenticated-only, no anon grant. Status derived (`<=0` Out, `<= min_stock` Low, else In). Recipe deduction **not implemented**.
 - **Shop settings** (`shop_settings`, id=1): single-row, editable via admin portal. `index.html` hardcodes fallback values, overwrites via `data-shop-*` attributes (`applyShopSettings()` in `main.js`). Run `supabase/shop-settings.sql` to create table + grants + RLS + storage bucket. **Grants required** — RLS alone 42501s. `tax_percent` stored but not yet applied to totals.
 - **Payments**: `create-payment` builds signed gateway forms; `payment-callback` verifies hash. Falls back to COD when merchant secrets unset. Guide: `supabase/functions/PAYMENTS.md`.

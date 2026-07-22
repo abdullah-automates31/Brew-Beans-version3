@@ -158,12 +158,33 @@ function showLoginView(message) {
     }
 }
 
-async function verifyAndEnter(pin) {
+// A FunctionsHttpError always carries the same generic "non-2xx status
+// code" message, so "wrong PIN" and "rate limited" are indistinguishable
+// until the response body is read off error.context. Without this, being
+// throttled looks exactly like a bad PIN.
+async function invokeStaffOrders(pin) {
     const { data, error } = await supabaseClient.functions.invoke('staff-list-orders', {
         body: { p_pin: pin }
     });
-    if (error) {
-        throw new Error('Incorrect PIN');
+    if (!error) return { data };
+
+    let status = 0;
+    let message = '';
+    if (error.context && typeof error.context.json === 'function') {
+        status = error.context.status;
+        try {
+            message = (await error.context.json()).error || '';
+        } catch (e) {
+            /* non-JSON body — fall back to the status alone */
+        }
+    }
+    return { status, message };
+}
+
+async function verifyAndEnter(pin) {
+    const { data, status, message } = await invokeStaffOrders(pin);
+    if (!data) {
+        throw new Error(status === 429 ? (message || 'Too many attempts. Try again in a minute.') : 'Incorrect PIN');
     }
     staffPin = pin;
     sessionStorage.setItem('bbStaffPin', pin);
@@ -304,15 +325,17 @@ async function loadOrders(isInitial) {
         if (!settled) { settled = true; showLoginView('Connection timed out. Check internet and try again.'); }
     }, 12000);
 
-    const { data, error } = await supabaseClient.functions.invoke('staff-list-orders', {
-        body: { p_pin: staffPin }
-    });
+    const { data, status } = await invokeStaffOrders(staffPin);
     clearTimeout(timeoutId);
     if (settled) return;
     settled = true;
 
-    if (error) {
-        showLoginView(error.message && error.message.includes('Too many') ? error.message : 'Session expired. Please log in again.');
+    if (!data) {
+        // Being throttled is not a reason to throw the staff member back to
+        // the login screen — the PIN they are holding is still valid, and
+        // the next poll is 15 s away. Only a rejected PIN ends the session.
+        if (status === 429) return;
+        showLoginView('Session expired. Please log in again.');
         return;
     }
 
