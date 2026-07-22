@@ -2435,6 +2435,38 @@ html.bb-no-splash #loading-screen {
     color: var(--accent);
 }
 
+/* .btn-checkout paints itself --primary, which is exactly this panel's
+   background — the button was invisible against it, leaving what looked
+   like a bare line of text where the order's primary CTA should be. On
+   the dark panel it inverts: light surface, dark green label. The other
+   two .btn-checkout instances sit on light backgrounds and are left as
+   they are, hence scoping this to the summary panel. */
+.checkout-summary-section .btn-checkout {
+    background: var(--accent);
+    color: var(--primary);
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.checkout-summary-section .btn-checkout:hover {
+    background: var(--cream);
+    color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.32);
+}
+
+.checkout-summary-section .btn-checkout:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+/* The global focus ring is tuned for light backgrounds and disappears
+   here, so keyboard users get a light one instead. */
+.checkout-summary-section .btn-checkout:focus-visible {
+    outline: 3px solid var(--secondary-light);
+    outline-offset: 3px;
+}
+
 .checkout-items {
     max-height: 200px;
     overflow-y: auto;
