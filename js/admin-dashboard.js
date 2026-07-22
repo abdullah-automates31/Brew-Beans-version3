@@ -774,6 +774,91 @@
     else row.classList.remove('is-closed');
   }
 
+  // ── MOBILE SIDEBAR ──
+  const MOBILE_QUERY = window.matchMedia('(max-width: 1024px)');
+
+  function isMobileLayout() { return MOBILE_QUERY.matches; }
+
+  function setSidebar(open) {
+    const sidebar = document.getElementById('adminSidebar');
+    const backdrop = document.getElementById('sidebarBackdrop');
+    const toggle = document.getElementById('menuToggle');
+    if (!sidebar) return;
+
+    sidebar.classList.toggle('open', open);
+    backdrop?.classList.toggle('show', open);
+    document.body.classList.toggle('sidebar-open', open);
+    toggle?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  const openSidebar  = () => setSidebar(true);
+  const closeSidebar = () => setSidebar(false);
+  const sidebarIsOpen = () => document.getElementById('adminSidebar')?.classList.contains('open');
+
+  // Any modal open means a swipe belongs to that modal, not the drawer.
+  function anyOverlayOpen() {
+    return !!document.querySelector('.modal-overlay.show, .confirm-overlay.show');
+  }
+
+  (function wireMobileSidebar() {
+    document.getElementById('menuToggle')?.addEventListener('click', () => setSidebar(!sidebarIsOpen()));
+    document.getElementById('sidebarBackdrop')?.addEventListener('click', closeSidebar);
+
+    // Picking a destination should reveal it, not leave the drawer over it.
+    document.querySelectorAll('.sidebar .nav-item').forEach(item => {
+      item.addEventListener('click', () => { if (isMobileLayout()) closeSidebar(); });
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && sidebarIsOpen()) closeSidebar();
+    });
+
+    // Rotating to a width where the sidebar is permanent must not leave
+    // the backdrop and the scroll lock behind.
+    MOBILE_QUERY.addEventListener('change', e => { if (!e.matches) closeSidebar(); });
+
+    // ── Swipe ──
+    const SWIPE_MIN_X = 60;     // px before it counts as a swipe at all
+    const SWIPE_RATIO = 1.5;    // horizontal must beat vertical by this much
+    const EDGE_ZONE   = 40;     // opening swipe has to start near the edge
+
+    let startX = 0, startY = 0, tracking = false;
+
+    document.addEventListener('touchstart', e => {
+      tracking = false;
+      if (!isMobileLayout() || e.touches.length !== 1 || anyOverlayOpen()) return;
+
+      // Regions that scroll sideways on their own (the analytics heatmap,
+      // any wide table) own their horizontal gestures.
+      if (e.target.closest('.heat-wrap, [data-no-swipe]')) return;
+
+      const t = e.touches[0];
+      // Opening is edge-initiated so a swipe across the middle of the page
+      // cannot yank the drawer out mid-scroll. Closing works anywhere,
+      // since the drawer is already covering the screen.
+      if (!sidebarIsOpen() && t.clientX > EDGE_ZONE) return;
+
+      startX = t.clientX;
+      startY = t.clientY;
+      tracking = true;
+    }, { passive: true });
+
+    document.addEventListener('touchend', e => {
+      if (!tracking) return;
+      tracking = false;
+
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+
+      if (Math.abs(dx) < SWIPE_MIN_X) return;
+      if (Math.abs(dx) < Math.abs(dy) * SWIPE_RATIO) return; // mostly vertical, that is a scroll
+
+      if (dx > 0) openSidebar();
+      else closeSidebar();
+    }, { passive: true });
+  })();
+
   // ── INVENTORY ──
   // Ingredients and their stock levels. Recipe deduction is not part of
   // this: stock only moves when someone edits it here.

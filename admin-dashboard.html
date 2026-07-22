@@ -39,13 +39,28 @@
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+    html {
+      /* Last line of defence. Nothing should overflow, but on a phone a
+         single stray wide element turns the whole dashboard into a
+         side-scrolling page, which is worse than clipping it. */
+      overflow-x: hidden;
+    }
+
     body {
       font-family: var(--font-primary);
       background: var(--bg);
       color: var(--text-dark);
       min-height: 100vh;
       display: flex;
+      overflow-x: hidden;
     }
+
+    /* Flex and grid children default to min-width:auto, which refuses to
+       shrink below their content and is the usual source of a page that
+       scrolls sideways. */
+    .main, .content, .page, .card { min-width: 0; }
+
+    img, table { max-width: 100%; }
 
     /* ── SIDEBAR ── */
     .sidebar {
@@ -1378,6 +1393,121 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
+    /* ── MOBILE LAYOUT ──
+       Below 1024px the sidebar leaves the flow entirely and slides over
+       the content. Before this, it was position:fixed at 260px with the
+       main column pushed over by the same amount, so on a 375px phone
+       the content was crushed into ~115px and the whole page scrolled
+       sideways. */
+
+    .menu-toggle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      margin-right: 0.85rem;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: white;
+      color: var(--text-dark);
+      font-size: 1.15rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .menu-toggle:hover { border-color: var(--secondary); color: var(--secondary); }
+    .menu-toggle:active { transform: scale(0.94); }
+
+    .sidebar-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 99;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s;
+    }
+
+    .sidebar-backdrop.show { opacity: 1; visibility: visible; }
+
+    @media (max-width: 1024px) {
+      .menu-toggle { display: inline-flex; }
+
+      .sidebar {
+        transform: translateX(-100%);
+        /* Only the transform animates. The shared --transition animates
+           `all`, which on an off-canvas panel means the browser also
+           tweens width and shadow every frame. */
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+        max-width: 86vw;
+      }
+
+      .sidebar.open {
+        transform: translateX(0);
+        box-shadow: 0 0 40px rgba(0,0,0,0.35);
+      }
+
+      .main { margin-left: 0; width: 100%; }
+
+      .topbar { padding: 0.85rem 1rem; }
+      .topbar-title h1 { font-size: 1.05rem; }
+      .topbar-title p { font-size: 0.75rem; }
+
+      .content { padding: 1rem; }
+    }
+
+    /* Body scroll lock while the drawer is open, so the page underneath
+       does not scroll away behind it. */
+    body.sidebar-open { overflow: hidden; }
+
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+      .inv-summary { grid-template-columns: repeat(3, 1fr); gap: 0.6rem; }
+
+      .inv-stat { flex-direction: column; align-items: flex-start; gap: 0.5rem; padding: 0.85rem; }
+      .inv-stat-value { font-size: 1.15rem; }
+      .inv-stat-label { font-size: 0.7rem; }
+
+      .menu-page-header { gap: 0.75rem; }
+      .menu-search-wrap { max-width: none; flex: 1 1 100%; }
+      .inv-header-actions { width: 100%; justify-content: space-between; }
+      .inv-filters { flex: 1; }
+      .inv-filter { flex: 1; text-align: center; padding: 0.4rem 0.5rem; }
+      .btn-add { flex: 0 0 auto; }
+
+      .settings-grid { grid-template-columns: 1fr; }
+      .settings-savebar { flex-direction: column; align-items: stretch; gap: 0.75rem; }
+      .settings-savebar-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .btn-discard, .btn-save-settings { justify-content: center; }
+
+      .logo-row { flex-direction: column; }
+      .logo-preview { width: 100%; }
+
+      /* Modals become near-fullscreen sheets — a centred 560px box on a
+         phone is mostly backdrop. */
+      .modal-overlay { padding: 0; align-items: flex-end; }
+      .modal {
+        max-width: 100%;
+        max-height: 92vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+      }
+      .modal-actions { position: sticky; bottom: 0; background: white; }
+
+      .toast { min-width: 0; width: calc(100vw - 2rem); }
+    }
+
+    @media (max-width: 400px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sidebar { transition: none; }
+      .sidebar-backdrop { transition: none; }
+    }
+
     /* ── INVENTORY ── */
     .inv-summary {
       display: grid;
@@ -1924,7 +2054,9 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <!-- SIDEBAR -->
-<aside class="sidebar">
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<aside class="sidebar" id="adminSidebar">
   <div class="sidebar-logo">
     <img src="img/brewbeans-logo.png" alt="Brew Beans" id="sidebarLogo">
     <div class="sidebar-logo-text">
@@ -1988,6 +2120,9 @@
 <!-- MAIN -->
 <main class="main">
   <div class="topbar">
+    <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-controls="adminSidebar" aria-expanded="false">
+      <i class="bi bi-list"></i>
+    </button>
     <div class="topbar-title">
       <h1 id="pageTitle">Orders</h1>
       <p id="pageSubtitle">Manage incoming orders</p>
