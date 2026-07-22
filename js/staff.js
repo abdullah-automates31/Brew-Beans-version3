@@ -54,16 +54,45 @@ function notifyNewOrder(order) {
     }
 }
 
+function renderNotifyBtn() {
+    $('#notifyBtn')
+        .toggleClass('is-on', notifyEnabled)
+        .attr('title', notifyEnabled ? 'New-order alerts are on — click to mute' : 'Enable new-order alerts')
+        .html(notifyEnabled
+            ? '<i class="bi bi-bell-fill me-1"></i>Alerts: On'
+            : '<i class="bi bi-bell me-1"></i>Alerts: Off');
+}
+
+// The browser keeps the notification permission across reloads but
+// notifyEnabled did not, so alerts silently went off every time staff
+// refreshed the dashboard and the button always read "Off".
+if ('Notification' in window && Notification.permission === 'granted') {
+    notifyEnabled = true;
+}
+renderNotifyBtn();
+
 $('#notifyBtn').on('click', async function () {
     if (!('Notification' in window)) {
         staffToast('Browser notifications are not supported here.', 'warning');
         return;
     }
+
+    // Already armed: clicking mutes. Re-requesting an already-granted
+    // permission resolves instantly, so without this the button could
+    // never be turned back off.
+    if (notifyEnabled) {
+        notifyEnabled = false;
+        renderNotifyBtn();
+        staffToast('New-order alerts muted.', 'warning');
+        return;
+    }
+
     const perm = await Notification.requestPermission();
     notifyEnabled = perm === 'granted';
-    $(this).html(notifyEnabled
-        ? '<i class="bi bi-bell-fill me-1"></i>Alerts: On'
-        : '<i class="bi bi-bell me-1"></i>Alerts: Off');
+    renderNotifyBtn();
+    if (!notifyEnabled) {
+        staffToast('Alerts stay off until notifications are allowed for this site.', 'warning');
+    }
 });
 
 $('#statusFilter button').on('click', function () {

@@ -3913,6 +3913,79 @@ textarea:focus-visible {
     padding: 40px 0;
 }
 
+/* Header actions. These were stock .btn-outline-secondary / -danger, so
+   they read as three grey boxes with no sense of which one matters or
+   what state anything is in. Pill shape, a white surface that lifts off
+   the page, and a real on-state for the alerts toggle. Scoped to the
+   wrapper rather than overriding the Bootstrap classes globally. */
+.staff-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    min-height: 40px;
+    border: 1.5px solid var(--border);
+    border-radius: 50px;
+    background: var(--surface-card);
+    color: var(--text-medium);
+    font-weight: 600;
+    font-size: 0.82rem;
+    box-shadow: var(--shadow-sm);
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.staff-actions .btn i {
+    font-size: 1em;
+    line-height: 1;
+}
+
+.staff-actions .btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: var(--shadow);
+}
+
+.staff-actions .btn:active {
+    box-shadow: var(--shadow-sm);
+}
+
+.staff-actions .btn:focus-visible {
+    outline: 3px solid var(--secondary-light);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+/* Armed. Staff need to tell at a glance whether they will actually be
+   pinged, so this is a filled state, not just a tinted label. */
+.staff-actions .btn.is-on {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--accent);
+}
+
+.staff-actions .btn.is-on:hover {
+    background: var(--primary-light);
+    border-color: var(--primary-light);
+    color: var(--accent);
+}
+
+/* Destructive, so it stays visually separate from the two neutral
+   actions — muted until you reach for it, solid red on hover. */
+.staff-actions .staff-action-danger {
+    color: #C82333;
+    border-color: rgba(200, 35, 51, 0.35);
+}
+
+.staff-actions .staff-action-danger:hover {
+    background: #C82333;
+    border-color: #C82333;
+    color: var(--accent);
+}
+
+.staff-actions .staff-action-danger:focus-visible {
+    outline-color: #C82333;
+}
+
 .staff-login-card {
     max-width: 400px;
     margin: 80px auto;
