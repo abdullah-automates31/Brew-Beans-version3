@@ -3043,9 +3043,23 @@ html.bb-no-splash #loading-screen {
 /* ============================================
    BUTTONS
    ============================================ */
+/* Bootstrap 5.3 drives every button state off --bs-btn-* custom
+   properties, and its pressed-state selectors (.btn:first-child:active,
+   :not(.btn-check)+.btn:active) are specificity 0,3,0 — higher than any
+   plain .btn-primary:active override. Setting the properties instead of
+   the declarations is what actually retints all of it: without this the
+   button flashed Bootstrap blue for as long as the mouse was held down,
+   then snapped back to green on release. */
 .btn-primary {
-    background: var(--primary);
-    border-color: var(--primary);
+    --bs-btn-bg: var(--primary);
+    --bs-btn-border-color: var(--primary);
+    --bs-btn-hover-bg: var(--secondary);
+    --bs-btn-hover-border-color: var(--secondary);
+    --bs-btn-active-bg: var(--secondary);
+    --bs-btn-active-border-color: var(--secondary);
+    --bs-btn-disabled-bg: var(--primary);
+    --bs-btn-disabled-border-color: var(--primary);
+    --bs-btn-focus-shadow-rgb: 15, 61, 46;
     font-weight: 600;
     padding: 0.75rem 1.5rem;
     border-radius: var(--radius);
@@ -3053,39 +3067,43 @@ html.bb-no-splash #loading-screen {
 }
 
 .btn-primary:hover {
-    background: var(--secondary);
-    border-color: var(--secondary);
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
 }
 
-/* Bootstrap ships this as #0d6efd and it was never themed, so the staff
+/* Same story: shipped as #0d6efd and never themed, so the staff
    dashboard's filter tabs and the contact section's Get Directions
-   button both rendered bright blue on a green-and-cream site. Border
-   radius is deliberately left to Bootstrap so .btn-group keeps its
-   segmented corners. */
+   button were bright blue on a green-and-cream site. Border radius is
+   left to Bootstrap so .btn-group keeps its segmented corners. */
 .btn-outline-primary {
-    color: var(--primary);
-    border-color: var(--primary);
+    --bs-btn-color: var(--primary);
+    --bs-btn-border-color: var(--primary);
+    --bs-btn-hover-color: var(--accent);
+    --bs-btn-hover-bg: var(--primary);
+    --bs-btn-hover-border-color: var(--primary);
+    --bs-btn-active-color: var(--accent);
+    --bs-btn-active-bg: var(--primary);
+    --bs-btn-active-border-color: var(--primary);
+    --bs-btn-disabled-color: var(--primary);
+    --bs-btn-disabled-border-color: var(--primary);
+    --bs-btn-focus-shadow-rgb: 15, 61, 46;
     font-weight: 600;
     transition: var(--transition);
 }
 
-.btn-outline-primary:hover,
-.btn-outline-primary.active,
-.btn-outline-primary:active,
-.btn-check:checked + .btn-outline-primary {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: var(--accent);
+/* Bootstrap's default focus ring is #86b7fe with an rgba(13,110,253,.25)
+   glow — blue on every input on the site. Components that already set
+   their own focused border keep it, being more specific than this. */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 0.25rem rgba(46, 139, 87, 0.2);
 }
 
-/* Bootstrap's focus ring reads from --bs-btn-focus-shadow-rgb, which is
-   still blue even once the fill is green. */
-.btn-primary:focus-visible,
-.btn-outline-primary:focus-visible {
-    box-shadow: 0 0 0 0.25rem rgba(15, 61, 46, 0.3);
-    outline: none;
+.form-check-input:checked {
+    background-color: var(--primary);
+    border-color: var(--primary);
 }
 
 /* ============================================
@@ -3984,6 +4002,132 @@ textarea:focus-visible {
 
 .staff-actions .staff-action-danger:focus-visible {
     outline-color: #C82333;
+}
+
+/* ---- Staff search ---- */
+.staff-search {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+}
+
+.staff-search .form-control {
+    height: 44px;
+    padding: 0 2.6rem;
+    border: 1.5px solid var(--border);
+    border-radius: 50px;
+    background: var(--surface-card);
+    font-size: 0.88rem;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.staff-search .form-control:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(15, 61, 46, 0.12);
+}
+
+.staff-search-icon,
+.staff-search-clear {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    pointer-events: none;
+}
+
+.staff-search-icon {
+    left: 0.95rem;
+    font-size: 0.95rem;
+}
+
+.staff-search:focus-within .staff-search-icon {
+    color: var(--primary);
+}
+
+/* Its own control, so it has to take pointer events back and clear the
+   44px touch-target floor. */
+.staff-search-clear {
+    right: 0.4rem;
+    pointer-events: auto;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.staff-search-clear:hover {
+    background: var(--border-light);
+    color: var(--text-dark);
+}
+
+.staff-search-clear[hidden] {
+    display: none;
+}
+
+/* The native one sits in the wrong place and ignores the theme. */
+.staff-search .form-control::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+/* ---- Staff empty state ---- */
+.staff-empty {
+    text-align: center;
+    padding: 4rem 1.5rem;
+    animation: staffEmptyIn 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes staffEmptyIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.staff-empty-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 84px;
+    margin-bottom: 1.1rem;
+    border-radius: 50%;
+    background: rgba(15, 61, 46, 0.06);
+    color: var(--primary);
+    font-size: 2.1rem;
+    animation: staffEmptyFloat 3.2s ease-in-out infinite;
+}
+
+@keyframes staffEmptyFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+}
+
+.staff-empty-title {
+    margin: 0 0 0.3rem;
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.staff-empty-hint {
+    margin: 0;
+    font-size: 0.88rem;
+    color: var(--text-light);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .staff-empty,
+    .staff-empty-icon {
+        animation: none;
+    }
 }
 
 .staff-login-card {

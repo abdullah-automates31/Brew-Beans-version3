@@ -53,11 +53,19 @@
                         <button type="button" class="btn btn-outline-primary" data-filter="completed">Completed</button>
                         <button type="button" class="btn btn-outline-primary" data-filter="cancelled">Cancelled</button>
                     </div>
-                    <input type="search" class="form-control form-control-sm ms-auto" id="searchInput" placeholder="Search by order ID, name, or phone" style="max-width: 280px;">
+                    <div class="staff-search ms-auto">
+                        <i class="bi bi-search staff-search-icon" aria-hidden="true"></i>
+                        <input type="search" class="form-control" id="searchInput" placeholder="Search by order ID, name, or phone" aria-label="Search orders">
+                        <button type="button" class="staff-search-clear" id="searchClear" aria-label="Clear search" hidden><i class="bi bi-x-lg"></i></button>
+                    </div>
                 </div>
 
                 <div id="ordersList"></div>
-                <div id="noOrders" class="text-center text-muted py-5" style="display:none;">No orders match.</div>
+                <div id="noOrders" class="staff-empty" style="display:none;" role="status" aria-live="polite">
+                    <span class="staff-empty-icon"><i class="bi bi-cup-hot" aria-hidden="true"></i></span>
+                    <p class="staff-empty-title" id="noOrdersTitle">No orders match</p>
+                    <p class="staff-empty-hint" id="noOrdersHint">Nothing waiting right now.</p>
+                </div>
             </div>
         </div>
     </section>

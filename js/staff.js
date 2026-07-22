@@ -102,7 +102,24 @@ $('#statusFilter button').on('click', function () {
     renderOrders();
 });
 
-$('#searchInput').on('input', function () { renderOrders(); });
+$('#searchInput').on('input', function () {
+    $('#searchClear').prop('hidden', !$(this).val());
+    renderOrders();
+});
+
+$('#searchClear').on('click', function () {
+    $('#searchInput').val('').trigger('focus');
+    $(this).prop('hidden', true);
+    renderOrders();
+});
+
+// Escape clears the field the way a search box is expected to.
+$('#searchInput').on('keydown', function (e) {
+    if (e.key === 'Escape' && $(this).val()) {
+        e.preventDefault();
+        $('#searchClear').trigger('click');
+    }
+});
 
 function showOrdersView(initialData) {
     $('#loginView').hide();
@@ -190,6 +207,31 @@ function matchesSearch(order, q) {
 // animateOrderNumbers: 'all' pops in every rendered card (first load / manual
 // refresh); a Set pops in only those order numbers (freshly-arrived orders
 // during background polling); omitted means no animation (filter/search re-renders).
+// "No orders match" is misleading when nothing is being searched for and
+// the filter is simply empty, so the copy follows whichever of the two
+// is actually true. Re-triggering the CSS animation on each render keeps
+// the state feeling responsive when staff flip between filters.
+function renderEmptyState(query) {
+    const filterLabel = { active: 'active', completed: 'completed', cancelled: 'cancelled' }[currentFilter];
+
+    if (query) {
+        $('#noOrdersTitle').text('No matches');
+        $('#noOrdersHint').text(`Nothing found for "${query}".`);
+    } else if (filterLabel) {
+        $('#noOrdersTitle').text(`No ${filterLabel} orders`);
+        $('#noOrdersHint').text('New orders will show up here automatically.');
+    } else {
+        $('#noOrdersTitle').text('No orders yet');
+        $('#noOrdersHint').text('New orders will show up here automatically.');
+    }
+
+    const el = document.getElementById('noOrders');
+    el.style.display = '';
+    el.style.animation = 'none';
+    void el.offsetWidth; // reflow, so the animation restarts rather than being skipped
+    el.style.animation = '';
+}
+
 function renderOrders(animateOrderNumbers) {
     const $list = $('#ordersList');
     $list.empty();
@@ -198,7 +240,7 @@ function renderOrders(animateOrderNumbers) {
     const orders = allOrders.filter(o => matchesFilter(o) && matchesSearch(o, q));
 
     if (!orders || orders.length === 0) {
-        $('#noOrders').show();
+        renderEmptyState(q);
         return;
     }
     $('#noOrders').hide();
