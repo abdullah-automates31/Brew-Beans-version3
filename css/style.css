@@ -12,10 +12,16 @@
     --secondary: #2E8B57;
     --secondary-light: #3DAF6E;
     --accent: #FFFFFF;
-    --accent-dark: #F8F9FA;
+    /* Warm off-white. Was #F8F9FA, a cold grey-blue that turned the cart
+       footer, menu filters and the legal/tracking/staff pages into cool
+       patches once the page ground went cream. */
+    --accent-dark: #F6F1E9;
     --text-dark: #1A1A1A;
     --text-medium: #4A4A4A;
-    --text-light: #6C757D;
+    /* Darkened from #6C757D: that cleared 4.5:1 on white, but the cream
+       page and the sunk sections are darker grounds and it fell to
+       4.36:1 / 3.93:1. This clears AA on both. */
+    --text-light: #626B73;
     --text-muted: #9CA3AF;
     --border: #E5E7EB;
     --border-light: #F3F4F6;
@@ -32,11 +38,20 @@
     --font-primary: 'Poppins', sans-serif;
     --font-display: 'Playfair Display', serif;
 
-    /* Coffee-brown + cream accents — used by the premium location modal
-       only; the rest of the site keeps its existing green palette. */
+    /* Coffee-brown + cream accents. */
     --coffee-brown: #6F4E37;
     --coffee-brown-light: #8A6650;
     --cream: #FAF5EE;
+
+    /* Figure/ground. Cards were white on a white page, separated only by
+       a hairline border, so the whole layout read as one flat sheet. The
+       page now sits on warm cream and cards stay white, which gives them
+       a real edge at rest and lets a coffee brand look warm rather than
+       clinical. --surface-sunk is for alternating sections that need to
+       read as recessed against the cream. */
+    --surface-card: #FFFFFF;
+    --surface-page: #FAF6F0;
+    --surface-sunk: #F2EAE0;
 }
 
 /* Reset & Base */
@@ -56,7 +71,7 @@ html {
 body {
     font-family: var(--font-primary);
     color: var(--text-dark);
-    background-color: var(--accent);
+    background-color: var(--surface-page);
     line-height: 1.6;
     overflow-x: hidden;
     max-width: 100%;
@@ -1304,8 +1319,10 @@ html.bb-no-splash #loading-screen {
     margin: 0 auto;
 }
 
+/* Was #F8FAF9, a cold grey-green. On a cream page it has to stay in the
+   warm family or the alternating sections read as two different sites. */
 .bg-light {
-    background: #F8FAF9 !important;
+    background: var(--surface-sunk) !important;
 }
 
 .bg-primary-dark {
@@ -1603,11 +1620,15 @@ html.bb-no-splash #loading-screen {
     box-shadow: var(--shadow);
 }
 
+/* Resting elevation, not just on hover. A card with no shadow until you
+   point at it has no presence in the layout — the grid reads as flat
+   panels rather than objects you can pick up. */
 .menu-item {
-    background: var(--accent);
+    background: var(--surface-card);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
     transition: var(--transition);
     height: 100%;
     display: flex;
