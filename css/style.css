@@ -4263,88 +4263,102 @@ textarea:focus-visible {
     margin-bottom: 0.5rem;
 }
 
+/* The group header is its own raised card sitting above its options,
+   rather than a bare line of text. It gives each group a visible
+   container edge, so a long list of options reads as a few labelled
+   sections instead of one undifferentiated stack. */
 .addon-group-title {
     font-weight: 600;
-    font-size: 0.95rem;
-    margin-bottom: 0.85rem;
+    font-size: 1rem;
+    margin-bottom: 0.7rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1.1rem;
+    background: var(--accent);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
     color: var(--text-dark);
     font-family: var(--font-display);
 }
 
 .addon-required-badge {
-    font-size: 0.62rem;
-    padding: 0.15rem 0.5rem;
+    font-size: 0.68rem;
+    padding: 0.3rem 0.75rem;
     background: rgba(220, 53, 69, 0.12);
-    color: #dc3545;
+    color: #C82333;
     border-radius: 50px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    white-space: nowrap;
+    flex: 0 0 auto;
 }
 
+/* --text-light on --border-light lands just under 4.5:1; --text-medium
+   on the same surface clears it. */
 .addon-optional-badge {
-    font-size: 0.62rem;
-    padding: 0.15rem 0.5rem;
+    font-size: 0.68rem;
+    padding: 0.3rem 0.75rem;
     background: var(--border-light);
-    color: var(--text-light);
+    color: var(--text-medium);
     border-radius: 50px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    white-space: nowrap;
+    flex: 0 0 auto;
 }
 
-/* Flex, not grid — a grid's equal-width columns force long labels
-   ("Ethiopian Single Origin") onto two lines while short ones ("Hot")
-   sit in mostly-empty boxes. Flex chips size to their own content, so
-   short options stay compact and long ones simply claim the width
-   their text actually needs, wrapping to the next row only when a
-   line is genuinely full. */
+/* One option per row, full width. The previous layout packed options
+   into content-sized chips so they wrapped like tags; that stayed
+   compact but read as a dense cluster of pills rather than a menu you
+   choose from, and long labels ("Ethiopian Single Origin") made the
+   rows ragged. A single column gives every option the same generous
+   hit area, lets the price line up on a common right edge, and lets
+   long names wrap inside their own row instead of reflowing the group. */
 .addon-options {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.55rem;
+    flex-direction: column;
+    gap: 0.6rem;
 }
 
-/* Compact chip-style option card — icon, name, and price all inline
-   on one row, sized to content rather than stretched into a grid
-   column. The little selection indicator is a pure ::before so the JS
-   template (unchanged) doesn't need to render one — circular for
-   single-select (required) groups, a checkmark for multi-select
-   (optional) ones, driven off the group's own data-required
-   attribute. Selected state is a solid fill (not just a tinted
-   border) for a stronger, more decisive look. */
+/* Full-width option card. The selection indicator is still a pure
+   ::before so the JS template stays untouched, but it now leads the row
+   on the left where the eye starts — circular for single-select
+   (required) groups, rounded-square with a tick for multi-select
+   (optional) ones, driven off the group's own data-required attribute.
+   min-height clears the 44px touch-target floor with room to spare. */
 .addon-option {
     position: relative;
     display: flex;
     align-items: center;
-    flex: 0 0 auto;
-    column-gap: 0.35rem;
-    padding: 0.5rem 1.5rem 0.5rem 0.65rem;
+    column-gap: 0.85rem;
+    width: 100%;
+    padding: 0.9rem 1.1rem 0.9rem 3.15rem;
     border: 1.5px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     cursor: pointer;
-    font-size: 0.76rem;
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    font-size: 0.9rem;
+    background: var(--accent);
     user-select: none;
-    line-height: 1.25;
-    min-height: 40px;
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+    line-height: 1.35;
+    min-height: 56px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
 .addon-option::before {
     content: '';
     position: absolute;
     top: 50%;
-    right: 0.55rem;
+    left: 1.1rem;
     transform: translateY(-50%);
-    width: 14px;
-    height: 14px;
-    border: 1.5px solid var(--border);
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--border);
     background: var(--accent);
     transition: var(--transition);
 }
@@ -4354,13 +4368,16 @@ textarea:focus-visible {
 }
 
 .addon-options[data-required="false"] .addon-option::before {
-    border-radius: 4px;
+    border-radius: 6px;
 }
 
+/* No nowrap — a full-width row has space to wrap a long option name
+   onto a second line, which beats truncating or forcing the row wider. */
 .addon-option-name {
     font-weight: 600;
     color: var(--text-dark);
-    white-space: nowrap;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .addon-option-icon {
@@ -4373,54 +4390,62 @@ textarea:focus-visible {
     color: inherit;
 }
 
+/* Border, background and shadow only — no translate. A row in a
+   vertical list that lifts on hover makes the whole group feel like it
+   is shifting under the pointer. */
 .addon-option:hover {
     border-color: var(--addon-accent-light);
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    background: rgba(255, 255, 255, 0.9);
+    box-shadow: var(--shadow);
+    background: #FCFDFC;
 }
 
+/* A tinted surface with an accent ring, rather than the full solid fill
+   the chips used. Across a full-width row a solid slab dominates the
+   panel and buries the price; the ring plus the filled indicator marks
+   the choice just as clearly and keeps the list readable. */
 .addon-option.selected {
     border-color: var(--addon-accent);
-    background: linear-gradient(135deg, var(--addon-accent) 0%, var(--addon-accent-light) 100%);
-    color: var(--accent);
-    box-shadow: var(--shadow);
+    background: rgba(15, 93, 67, 0.06);
+    box-shadow: 0 0 0 3px rgba(15, 93, 67, 0.12);
 }
 
 .addon-option.selected .addon-option-name {
-    color: var(--accent);
+    color: var(--addon-accent);
 }
 
 .addon-option.selected::before {
-    background: var(--accent);
-    border-color: var(--accent);
-    transform: translateY(-50%) scale(1.05);
+    background: var(--addon-accent);
+    border-color: var(--addon-accent);
 }
 
+/* Single-select: a filled dot inside the ring. Multi-select: a tick.
+   The shape difference carries the meaning on its own, so the two
+   states are not distinguished by colour alone. */
 .addon-options[data-required="true"] .addon-option.selected::before {
-    box-shadow: inset 0 0 0 3px var(--addon-accent);
+    box-shadow: inset 0 0 0 4px var(--accent);
 }
 
 .addon-options[data-required="false"] .addon-option.selected::before {
     content: '\F633';
     font-family: 'bootstrap-icons';
-    font-size: 9px;
-    color: var(--addon-accent);
+    font-size: 13px;
+    color: var(--accent);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .addon-option-price {
-    font-size: 0.7rem;
+    font-size: 0.85rem;
     color: var(--secondary);
-    font-weight: 600;
-    opacity: 0.9;
+    font-weight: 700;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    margin-left: auto;
 }
 
 .addon-option.selected .addon-option-price {
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--addon-accent);
 }
 
 /* ---- Live price breakdown ---- */
