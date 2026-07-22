@@ -50,8 +50,10 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="preconnect" href="https://images.unsplash.com">
 
-    <!-- Hero background is the LCP element on this page — preload it -->
-    <link rel="preload" as="image" href="img/bg-2.jpg" fetchpriority="high">
+    <!-- Hero background is the LCP element on this page — preload it.
+         WebP first; browsers without WebP support skip this preload on the
+         type mismatch and pick up the JPEG the slide's own fallback loads. -->
+    <link rel="preload" as="image" type="image/webp" href="img/bg-2.webp" fetchpriority="high">
     <link rel="preload" as="image" href="img/brewbeans-logo.png" fetchpriority="high">
 
     <!-- Fonts -->
@@ -296,7 +298,7 @@
 
             <!-- Slide 1: Brand intro -->
             <div class="hero-slide is-active" data-slide-index="0">
-                <div class="hero-bg" style="background-image:url('img/bg-2.jpg')"></div>
+                <div class="hero-bg" style="background-image:url('img/bg-2.jpg');background-image:image-set(url('img/bg-2.webp') type('image/webp'),url('img/bg-2.jpg') type('image/jpeg'))"></div>
                 <div class="hero-overlay"></div>
                 <div class="hero-content">
                     <div class="hero-inner" data-aos="fade-up" data-aos-duration="1200">
@@ -347,8 +349,8 @@
                  so no competing title/subtitle overlay here, just a
                  CTA pinned clear of the artwork. -->
             <div class="hero-slide hero-slide-banner" data-slide-index="1">
-                <div class="hero-bg-blur" style="background-image:url('img/predict.jpg')"></div>
-                <div class="hero-bg" style="background-image:url('img/predict.jpg');background-position:center;"></div>
+                <div class="hero-bg-blur" style="background-image:url('img/predict.jpg');background-image:image-set(url('img/predict.webp') type('image/webp'),url('img/predict.jpg') type('image/jpeg'))"></div>
+                <div class="hero-bg" style="background-image:url('img/predict.jpg');background-image:image-set(url('img/predict.webp') type('image/webp'),url('img/predict.jpg') type('image/jpeg'));background-position:center;"></div>
                 <div class="hero-overlay"></div>
                 <div class="hero-content">
                     <div class="hero-inner">
@@ -366,8 +368,8 @@
                  so no competing title/subtitle overlay here, just a
                  CTA pinned clear of the artwork. -->
             <div class="hero-slide hero-slide-banner" data-slide-index="2">
-                <div class="hero-bg-blur" style="background-image:url('img/3rd carousel.jpg')"></div>
-                <div class="hero-bg" style="background-image:url('img/3rd carousel.jpg');background-position:center;"></div>
+                <div class="hero-bg-blur" style="background-image:url('img/3rd carousel.jpg');background-image:image-set(url('img/3rd carousel.webp') type('image/webp'),url('img/3rd carousel.jpg') type('image/jpeg'))"></div>
+                <div class="hero-bg" style="background-image:url('img/3rd carousel.jpg');background-image:image-set(url('img/3rd carousel.webp') type('image/webp'),url('img/3rd carousel.jpg') type('image/jpeg'));background-position:center;"></div>
                 <div class="hero-overlay"></div>
                 <div class="hero-content">
                     <div class="hero-inner">
