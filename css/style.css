@@ -3911,6 +3911,87 @@ textarea:focus-visible {
     opacity: 0;
 }
 
+/* ── Notify-me button ──
+   Replaces the plain Bootstrap outline button. Two states: the default
+   "Notify me", and "Notifying" once permission is granted (.is-on). */
+.btn-notify {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    min-height: 34px;
+    font-family: var(--font-primary, inherit);
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--secondary);
+    background: rgba(46, 139, 87, 0.08);
+    border: 1.5px solid rgba(46, 139, 87, 0.35);
+    border-radius: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease,
+                color 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
+}
+
+.btn-notify:hover {
+    background: rgba(46, 139, 87, 0.14);
+    border-color: var(--secondary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(46, 139, 87, 0.18);
+}
+.btn-notify:active { transform: translateY(0); box-shadow: none; }
+.btn-notify:focus-visible {
+    outline: 2px solid var(--secondary);
+    outline-offset: 2px;
+}
+
+/* The bell swings on hover — a small nod to what the button does. */
+.btn-notify .bi {
+    font-size: 0.95rem;
+    transform-origin: 50% 12%;
+}
+.btn-notify:hover .bi { animation: bell-swing 0.6s ease; }
+
+@keyframes bell-swing {
+    0%, 100% { transform: rotate(0); }
+    20%      { transform: rotate(14deg); }
+    40%      { transform: rotate(-11deg); }
+    60%      { transform: rotate(7deg); }
+    80%      { transform: rotate(-4deg); }
+}
+
+/* Enabled state: filled, and the bell breathes so it reads as "live". */
+.btn-notify.is-on {
+    color: #fff;
+    background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-light) 100%);
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(46, 139, 87, 0.3);
+}
+.btn-notify.is-on:hover {
+    box-shadow: 0 6px 16px rgba(46, 139, 87, 0.4);
+}
+.btn-notify.is-on .bi { animation: bell-pulse 2.2s ease-in-out infinite; }
+
+@keyframes bell-pulse {
+    0%, 100%     { transform: scale(1); }
+    50%          { transform: scale(1.15); }
+}
+
+/* A one-shot pop the moment it switches on, so the change is felt. */
+.btn-notify.just-on { animation: notify-pop 0.4s var(--ease, cubic-bezier(0.4, 0, 0.2, 1)); }
+@keyframes notify-pop {
+    0%   { transform: scale(1); }
+    45%  { transform: scale(1.08); }
+    100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-notify,
+    .btn-notify .bi { animation: none !important; transition: none; }
+    .btn-notify:hover { transform: none; }
+}
+
 .tracking-steps {
     display: flex;
     justify-content: space-between;

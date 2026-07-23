@@ -14,6 +14,24 @@ const CANCELLABLE_STATUSES = ['placed', 'preparing'];
 let pollTimer = null;
 let lastStatus = null;
 let notifyEnabled = false;
+
+// Single source of truth for the notify button's look. Toggling a class
+// and swapping the label keeps the markup (icon + text span) intact —
+// rewriting innerHTML, as this used to, would drop the structure the CSS
+// animations hang off. `pop` plays the one-shot switch-on animation, but
+// only when the user just turned it on, not on the silent restore path.
+function setNotifyState(on, pop) {
+    const $btn = $('#notifyBtn');
+    $btn.toggleClass('is-on', on).attr('aria-pressed', String(on));
+    $btn.find('.bi').attr('class', on ? 'bi bi-bell-fill' : 'bi bi-bell');
+    $btn.find('.btn-notify-text').text(on ? 'Notifying' : 'Notify me');
+    if (on && pop) {
+        $btn.removeClass('just-on');
+        // Reflow so the animation restarts even on a repeat toggle.
+        void $btn[0].offsetWidth;
+        $btn.addClass('just-on');
+    }
+}
 let currentOrderNumber = null;
 let currentPhone = null;
 let cancelOrderModal = null;
@@ -43,7 +61,7 @@ $('#notifyBtn').on('click', async function () {
     }
     const perm = await Notification.requestPermission();
     notifyEnabled = perm === 'granted';
-    $(this).html(notifyEnabled ? '<i class="bi bi-bell-fill me-1"></i>Notifying' : '<i class="bi bi-bell me-1"></i>Notify me');
+    setNotifyState(notifyEnabled, true);
 });
 
 $('#cancelOrderBtn').on('click', function () {
@@ -287,11 +305,12 @@ $(document).ready(function () {
         if ('Notification' in window) {
             if (Notification.permission === 'granted') {
                 notifyEnabled = true;
-                $('#notifyBtn').html('<i class="bi bi-bell-fill me-1"></i>Notifying');
+                // Silent restore of an already-granted permission — no pop.
+                setNotifyState(true, false);
             } else if (Notification.permission !== 'denied') {
                 Notification.requestPermission().then(perm => {
                     notifyEnabled = perm === 'granted';
-                    if (notifyEnabled) $('#notifyBtn').html('<i class="bi bi-bell-fill me-1"></i>Notifying');
+                    if (notifyEnabled) setNotifyState(true, true);
                 });
             }
         }
