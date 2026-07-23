@@ -83,7 +83,11 @@
     .sidebar {
       width: var(--sidebar-width);
       background: var(--primary);
-      min-height: 100vh;
+      /* height, not min-height. The sidebar is position: fixed, so it does
+         not scroll with the page — with min-height it grew past the bottom
+         of the viewport once the nav had enough items, taking the footer
+         and its Sign Out button somewhere the user could never reach. */
+      height: 100vh;
       position: fixed;
       left: 0; top: 0;
       display: flex;
@@ -92,7 +96,14 @@
       transition: var(--transition);
     }
 
+    /* dvh accounts for mobile browser chrome that shrinks the visible
+       viewport; declared second so browsers without it keep the vh rule. */
+    @supports (height: 100dvh) {
+      .sidebar { height: 100dvh; }
+    }
+
     .sidebar-logo {
+      flex-shrink: 0;
       padding: 1.5rem;
       border-bottom: 1px solid rgba(255,255,255,0.08);
       display: flex;
@@ -121,10 +132,29 @@
       letter-spacing: 0.08em;
     }
 
+    /* The nav is the only part that may scroll. min-height: 0 is required —
+       a flex child defaults to min-height: auto, which refuses to shrink
+       below its content and would push the footer off-screen again instead
+       of scrolling here. */
     .sidebar-nav {
-      flex: 1;
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow-y: auto;
       padding: 1rem 0;
+      /* Left visible rather than hidden: when the nav does overflow, the
+         scrollbar is the only thing telling the user there are more items
+         below. Just toned down to suit the dark panel. */
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.2) transparent;
     }
+
+    .sidebar-nav::-webkit-scrollbar { width: 6px; }
+    .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-nav::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.18);
+      border-radius: 3px;
+    }
+    .sidebar-nav::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
 
     .nav-section-title {
       color: rgba(255,255,255,0.35);
@@ -189,7 +219,11 @@
 
     .nav-badge.show { display: block; }
 
+    /* flex-shrink: 0 so Sign Out keeps its full height no matter how many
+       nav items are above it — the footer is the one thing that must stay
+       reachable. */
     .sidebar-footer {
+      flex-shrink: 0;
       padding: 1rem;
       border-top: 1px solid rgba(255,255,255,0.08);
     }
