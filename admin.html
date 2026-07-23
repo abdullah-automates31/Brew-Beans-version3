@@ -184,6 +184,45 @@
       80%       { transform: translateX(4px); }
     }
 
+    .alert-ok {
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      color: #15803D;
+      border-radius: 10px;
+      padding: 0.7rem 1rem;
+      font-size: 0.82rem;
+      margin-bottom: 1.25rem;
+      display: none;
+      align-items: center;
+      gap: 0.5rem;
+      line-height: 1.5;
+    }
+    .alert-ok.show { display: flex; }
+
+    .forgot-row {
+      text-align: center;
+      margin-top: 1rem;
+      animation: fadeUp 0.5s var(--ease) 0.8s both;
+    }
+
+    /* A button, not an <a href="#">: it performs an action rather than
+       navigating, so a link would lie to screen readers and leave a stray
+       "#" in the address bar. */
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--text-light);
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 0.45rem 0.6rem;
+      border-radius: 8px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .link-btn:hover { color: var(--secondary); background: rgba(46,139,87,0.07); }
+    .link-btn:focus-visible { outline: 2px solid var(--secondary); outline-offset: 2px; }
+    .link-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
     /* Floating label group */
     .form-group {
       margin-bottom: 1.25rem;
@@ -394,6 +433,11 @@
         <span id="errorMsg">Invalid email or password.</span>
       </div>
 
+      <div class="alert-ok" id="okAlert" role="status">
+        <i class="bi bi-envelope-check-fill"></i>
+        <span id="okMsg"></span>
+      </div>
+
       <form id="loginForm" autocomplete="on">
         <div class="form-group">
           <label for="email">Email Address</label>
@@ -419,6 +463,10 @@
           <span class="btn-text"><i class="bi bi-shield-lock"></i> Sign In</span>
         </button>
       </form>
+
+      <div class="forgot-row">
+        <button type="button" class="link-btn" id="forgotBtn">Forgot password?</button>
+      </div>
     </div>
 
     <div class="login-footer">
@@ -455,6 +503,45 @@
       passwordInput.setSelectionRange(pos, pos);
     });
 
+    const forgotBtn = document.getElementById('forgotBtn');
+    const okAlert   = document.getElementById('okAlert');
+    const okMsg     = document.getElementById('okMsg');
+
+    forgotBtn.addEventListener('click', async () => {
+      const email = document.getElementById('email').value.trim();
+      errorAlert.classList.remove('show');
+      okAlert.classList.remove('show');
+
+      if (!email) {
+        errorMsg.textContent = 'Enter your email address first, then tap "Forgot password?".';
+        errorAlert.classList.add('show');
+        document.getElementById('email').focus();
+        return;
+      }
+
+      forgotBtn.disabled = true;
+      forgotBtn.textContent = 'Sending...';
+
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: new URL('reset-password.html', window.location.href).href
+      });
+
+      forgotBtn.disabled = false;
+      forgotBtn.textContent = 'Forgot password?';
+
+      if (error) {
+        errorMsg.textContent = error.message;
+        errorAlert.classList.add('show');
+        return;
+      }
+
+      // Deliberately says "if an account exists" rather than confirming it
+      // does: a definite answer here turns this box into a way to check
+      // which email addresses are registered.
+      okMsg.textContent = 'If an account exists for that address, a reset link is on its way. It expires shortly, so use the newest email.';
+      okAlert.classList.add('show');
+    });
+
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email    = document.getElementById('email').value.trim();
@@ -463,6 +550,7 @@
       loginBtn.classList.add('loading');
       loginBtn.disabled = true;
       errorAlert.classList.remove('show');
+      okAlert.classList.remove('show');
 
       const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
