@@ -32,7 +32,11 @@ UPDATE public.staff_pins
 CREATE OR REPLACE FUNCTION public.hash_staff_pin()
 RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = public, pg_temp
+-- `extensions` must be here: Supabase installs pgcrypto into that schema,
+-- so pinning the path to public alone puts crypt() and gen_salt() out of
+-- reach and every PIN check fails with "function crypt(text, text) does
+-- not exist".
+SET search_path = public, extensions, pg_temp
 AS $$
 BEGIN
   IF TG_OP = 'INSERT' OR NEW.pin IS DISTINCT FROM OLD.pin THEN
@@ -55,7 +59,11 @@ RETURNS TABLE(staff_id uuid)
 LANGUAGE plpgsql SECURITY DEFINER
 -- A SECURITY DEFINER function runs as its owner, so an attacker-controlled
 -- search_path could point `crypt` or `staff_pins` at objects of their own.
-SET search_path = public, pg_temp
+-- `extensions` must be here: Supabase installs pgcrypto into that schema,
+-- so pinning the path to public alone puts crypt() and gen_salt() out of
+-- reach and every PIN check fails with "function crypt(text, text) does
+-- not exist".
+SET search_path = public, extensions, pg_temp
 AS $$
 BEGIN
   RETURN QUERY
@@ -82,7 +90,11 @@ GRANT EXECUTE ON FUNCTION public.verify_staff_pin(text) TO service_role;
 CREATE OR REPLACE FUNCTION public.get_customer_orders(p_phone text)
 RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, pg_temp
+-- `extensions` must be here: Supabase installs pgcrypto into that schema,
+-- so pinning the path to public alone puts crypt() and gen_salt() out of
+-- reach and every PIN check fails with "function crypt(text, text) does
+-- not exist".
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   result json;

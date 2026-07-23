@@ -34,10 +34,16 @@ GRANT  EXECUTE ON FUNCTION public.verify_staff_pin(text) TO service_role;
 -- A SECURITY DEFINER function runs with its owner's privileges. Without a
 -- fixed search_path, a caller who can create objects in a schema earlier in
 -- that path can substitute their own `crypt` or `staff_pins`.
+--
+-- `extensions` has to be in the list. Supabase installs pgcrypto there, not
+-- in public, so pinning the path to public alone puts crypt() and
+-- gen_salt() out of reach — every PIN check then fails with "function
+-- crypt(text, text) does not exist", which takes staff login down. An
+-- earlier revision of this file made exactly that mistake.
 
-ALTER FUNCTION public.verify_staff_pin(text)     SET search_path = public, pg_temp;
-ALTER FUNCTION public.get_customer_orders(text)  SET search_path = public, pg_temp;
-ALTER FUNCTION public.hash_staff_pin()           SET search_path = public, pg_temp;
+ALTER FUNCTION public.verify_staff_pin(text)     SET search_path = public, extensions, pg_temp;
+ALTER FUNCTION public.get_customer_orders(text)  SET search_path = public, extensions, pg_temp;
+ALTER FUNCTION public.hash_staff_pin()           SET search_path = public, extensions, pg_temp;
 
 
 -- ============================================================================
@@ -52,7 +58,7 @@ ALTER FUNCTION public.hash_staff_pin()           SET search_path = public, pg_te
 CREATE OR REPLACE FUNCTION public.get_customer_orders(p_phone text)
 RETURNS json
 LANGUAGE plpgsql SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
 DECLARE
   result json;
