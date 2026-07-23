@@ -2553,7 +2553,10 @@ html.bb-no-splash #loading-screen {
 .checkout-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    /* Top-align so the price lines up with the item's first line, not the
+       vertical centre of a two/three-line name+addons block. */
+    align-items: flex-start;
+    gap: 0.75rem;
     padding: 0.6rem 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     font-size: 0.9rem;
@@ -2563,10 +2566,30 @@ html.bb-no-splash #loading-screen {
     border-bottom: none;
 }
 
+/* Keep the price on one line and pinned to the right — it must never be
+   pushed or overlapped by a long item name or addon list. */
+.checkout-item > span:last-child {
+    flex-shrink: 0;
+    white-space: nowrap;
+    text-align: right;
+}
+
 .checkout-item-name {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.2rem 0.5rem;
+    /* Take the remaining row and allow shrinking so long text wraps instead
+       of spilling into the price column. */
+    flex: 1;
+    min-width: 0;
+}
+
+/* Addons and the note each drop onto their own line under the name rather
+   than sitting inline beside it (which was colliding with the price). */
+.checkout-item-addons,
+.checkout-item-note {
+    flex-basis: 100%;
 }
 
 .checkout-item-qty {
