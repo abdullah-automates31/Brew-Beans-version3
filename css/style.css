@@ -3917,6 +3917,57 @@ textarea:focus-visible {
     opacity: 0;
 }
 
+/* ── Back to Menu ──
+   An escape hatch out of the tracking view. Kept to the card's width and
+   left-aligned above the logo; the arrow slides left on hover to reinforce
+   "go back". */
+.tracking-nav {
+    max-width: 640px;
+    margin: 0 auto 6px;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 1rem;
+    font-family: var(--font-primary, inherit);
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--primary);
+    background: rgba(15, 61, 46, 0.06);
+    border: 1.5px solid rgba(15, 61, 46, 0.15);
+    border-radius: 999px;
+    text-decoration: none;
+    transition: background 0.2s ease, border-color 0.2s ease,
+                transform 0.14s ease, box-shadow 0.2s ease;
+}
+
+.btn-back:hover,
+.btn-back:focus-visible {
+    color: var(--primary);
+    background: rgba(15, 61, 46, 0.10);
+    border-color: rgba(15, 61, 46, 0.30);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15, 61, 46, 0.12);
+}
+.btn-back:active { transform: translateY(0); box-shadow: none; }
+.btn-back:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.btn-back .bi {
+    font-size: 1rem;
+    transition: transform 0.2s ease;
+}
+.btn-back:hover .bi { transform: translateX(-3px); }
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-back,
+    .btn-back .bi { transition: none; }
+    .btn-back:hover { transform: none; }
+    .btn-back:hover .bi { transform: none; }
+}
+
 /* ── Notify-me button ──
    Replaces the plain Bootstrap outline button. Two states: the default
    "Notify me", and "Notifying" once permission is granted (.is-on). */
