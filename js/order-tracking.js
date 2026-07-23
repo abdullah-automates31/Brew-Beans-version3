@@ -198,7 +198,9 @@ async function trackOrder(orderNumber, phone, silent) {
 
     // Animate on fresh lookup or when status advances — not on every silent background poll.
     renderSteps(order.status, !silent || statusChanged);
-    $('#paymentBadge').text(paymentLabel(order.payment_method, order.payment_status));
+    $('#paymentBadge')
+        .text(paymentLabel(order.payment_method, order.payment_status))
+        .attr('class', 'payment-badge payment-badge--' + (order.payment_status || 'pending'));
 
     if (order.status === 'cancelled') {
         $('#etaText').text('');

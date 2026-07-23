@@ -3998,6 +3998,107 @@ textarea:focus-visible {
     .btn-notify:hover { transform: none; }
 }
 
+/* ── Payment status badge ──
+   Replaces the flat grey Bootstrap badge with a pill that carries a leading
+   status dot. The dot pulses while payment is still pending — so "waiting"
+   reads at a glance — and settles to a solid colour once paid or failed. */
+.payment-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.42rem 0.95rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    border-radius: 999px;
+    border: 1.5px solid transparent;
+    /* Default look = pending, so the badge is styled even before JS runs. */
+    color: #92580A;
+    background: #FEF3C7;
+    border-color: rgba(180, 83, 9, 0.28);
+}
+
+.payment-badge::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+    animation: pay-dot-pulse 1.8s ease-out infinite;
+}
+
+@keyframes pay-dot-pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(180, 83, 9, 0.45); }
+    70%  { box-shadow: 0 0 0 7px rgba(180, 83, 9, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(180, 83, 9, 0); }
+}
+
+/* Paid — settled green, dot stops pulsing. */
+.payment-badge--paid {
+    color: var(--secondary);
+    background: rgba(46, 139, 87, 0.12);
+    border-color: rgba(46, 139, 87, 0.30);
+}
+.payment-badge--paid::before { animation: none; }
+
+/* Failed — red, static. */
+.payment-badge--failed {
+    color: #B02A37;
+    background: rgba(220, 53, 69, 0.12);
+    border-color: rgba(220, 53, 69, 0.32);
+}
+.payment-badge--failed::before { animation: none; }
+
+/* ── Cancel Order button ──
+   A calmer, on-brand take on Bootstrap's outline-danger: a soft pill that
+   fills red on hover with a small lift, its × icon spinning a quarter turn
+   so the destructive action still feels deliberate, not alarming. */
+.btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1.2rem;
+    font-family: var(--font-primary, inherit);
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1;
+    color: #C0392B;
+    background: rgba(220, 53, 69, 0.06);
+    border: 1.5px solid rgba(220, 53, 69, 0.45);
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+                transform 0.14s ease, box-shadow 0.2s ease;
+}
+
+.btn-cancel:hover,
+.btn-cancel:focus-visible {
+    color: #fff;
+    background: linear-gradient(135deg, #E24A4A 0%, #C0392B 100%);
+    border-color: transparent;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(220, 53, 69, 0.30);
+}
+.btn-cancel:active { transform: translateY(0); box-shadow: 0 2px 6px rgba(220, 53, 69, 0.25); }
+.btn-cancel:focus-visible { outline: 2px solid #C0392B; outline-offset: 2px; }
+
+.btn-cancel .bi {
+    font-size: 0.95rem;
+    transition: transform 0.3s ease;
+}
+.btn-cancel:hover .bi { transform: rotate(90deg); }
+
+@media (prefers-reduced-motion: reduce) {
+    .payment-badge::before { animation: none !important; }
+    .btn-cancel,
+    .btn-cancel .bi { transition: none; }
+    .btn-cancel:hover { transform: none; }
+    .btn-cancel:hover .bi { transform: none; }
+}
+
 .tracking-steps {
     display: flex;
     justify-content: space-between;
