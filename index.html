@@ -138,6 +138,13 @@
     </script>
 </head>
 <body>
+    <!-- A password-recovery email sent from the Supabase dashboard lands on
+         the Site URL (this page) with the token in the hash, not on the
+         reset page. Forward it — and the expired-link error, which arrives
+         the same way — to reset-password.html before anything else runs, so
+         both routes reach the same place. Runs first, replace() so it leaves
+         no history entry, hash preserved so the token survives the hop. -->
+    <script>(function(){var h=location.hash;if(h&&(h.indexOf('type=recovery')!==-1||h.indexOf('error_code=')!==-1)){location.replace('reset-password.html'+h);}})();</script>
     <script>if(sessionStorage.getItem('bbVisited')){document.documentElement.classList.add('bb-no-splash');}sessionStorage.setItem('bbVisited','1');</script>
     <!-- Loading Screen -->
     <div id="loading-screen">
