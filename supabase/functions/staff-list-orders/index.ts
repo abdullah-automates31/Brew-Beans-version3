@@ -8,6 +8,10 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+// Scopes the rate-limit buckets so this function's traffic cannot exhaust
+// update-order-status's budget for the same IP.
+const ENDPOINT = 'staff-list-orders'
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -17,10 +21,19 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders })
   }
 
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  )
+
   const ip = clientIp(req)
-  if (!allowRequest(ip) || pinAttemptsExhausted(ip)) {
-    return new Response(JSON.stringify({ error: 'Too many attempts. Try again in a minute.' }), { status: 429, headers: corsHeaders })
-  }
+  const tooMany = new Response(
+    JSON.stringify({ error: 'Too many attempts. Try again in a minute.' }),
+    { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
+
+  if (!await allowRequest(supabase, ENDPOINT, ip)) return tooMany
+  if (await pinAttemptsExhausted(supabase, ENDPOINT, ip)) return tooMany
 
   try {
     const { p_pin } = await req.json()
@@ -28,11 +41,6 @@ serve(async (req) => {
     if (!p_pin) {
       return new Response(JSON.stringify({ error: 'PIN is required' }), { status: 400, headers: corsHeaders })
     }
-
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
 
     // Not .maybeSingle(): the RPC returns a set, and two staff sharing a
     // PIN would make it throw instead of authenticating. Once PINs are
@@ -42,7 +50,7 @@ serve(async (req) => {
 
     if (pinError) throw pinError
     if (!matches || matches.length === 0) {
-      recordFailedPin(ip)
+      await recordFailedPin(supabase, ENDPOINT, ip)
       return new Response(JSON.stringify({ error: 'Invalid PIN' }), { status: 401, headers: corsHeaders })
     }
 

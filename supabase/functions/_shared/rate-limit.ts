@@ -1,18 +1,22 @@
 // Per-IP throttling for the PIN-guarded staff endpoints.
 //
+// The counter lives in the database, not in this module. An earlier version
+// kept it in a module-level Map, which does not survive: Supabase runs each
+// function in a V8 isolate created and discarded around requests, so the
+// Map is empty far more often than not. Measured against the live project,
+// 42 consecutive wrong-PIN requests from one IP produced zero 429s. See
+// supabase/rate-limiting.sql for the table and the atomic counter.
+//
 // Two separate budgets, because one number cannot do both jobs. Staff share
 // the shop's WiFi, so every device polling the dashboard every 15 s arrives
 // from a single IP — a flat 5/minute locked the second person out as soon
-// as they logged in. Brute force, on the other hand, is a stream of *wrong*
-// PINs, so that is what gets the tight budget. A staff member who keeps
-// typing the right PIN never touches it.
-//
-// This lives in the isolate's memory, so it is per-instance and lost when
-// the instance recycles. It raises the cost of guessing; it is not a
-// guarantee. The real protection is that the PIN is bcrypt-hashed and only
-// verifiable through the service role.
+// as they logged in. Brute force is a stream of *wrong* PINs, so that is
+// what gets the tight budget; someone who keeps typing the right PIN never
+// touches it.
 
-const WINDOW_MS = 60_000;
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const WINDOW_SECONDS = 60;
 
 // Enough headroom for several staff polling every 15 s from one IP.
 const MAX_REQUESTS = 60;
@@ -21,58 +25,77 @@ const MAX_REQUESTS = 60;
 // thousands.
 const MAX_FAILED_PINS = 5;
 
-interface Bucket {
-    count: number;
-    resetAt: number;
-}
-
-const requests = new Map<string, Bucket>();
-const failures = new Map<string, Bucket>();
-
-// The maps are keyed by IP and nothing removes entries on its own, so sweep
-// expired buckets once the map is big enough to be worth walking.
-function sweep(map: Map<string, Bucket>, now: number): void {
-    if (map.size < 1000) return;
-    for (const [key, bucket] of map) {
-        if (now > bucket.resetAt) map.delete(key);
-    }
-}
-
-function take(map: Map<string, Bucket>, key: string, max: number): boolean {
-    const now = Date.now();
-    sweep(map, now);
-
-    const bucket = map.get(key);
-    if (!bucket || now > bucket.resetAt) {
-        map.set(key, { count: 1, resetAt: now + WINDOW_MS });
-        return true;
-    }
-    if (bucket.count >= max) return false;
-    bucket.count++;
-    return true;
-}
-
 export function clientIp(req: Request): string {
     return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || req.headers.get('x-real-ip')
         || 'unknown';
 }
 
-/** Overall request budget — catches hammering regardless of PIN validity. */
-export function allowRequest(ip: string): boolean {
-    return take(requests, ip, MAX_REQUESTS);
+async function hit(
+    supabase: SupabaseClient,
+    bucket: string,
+    max: number,
+): Promise<boolean> {
+    const { data, error } = await supabase.rpc('rate_limit_hit', {
+        p_bucket: bucket,
+        p_max: max,
+        p_window_seconds: WINDOW_SECONDS,
+    });
+
+    // Fail open. If the limiter itself is broken, staff still need to work
+    // their shift — a throttle that takes the dashboard down when the RPC
+    // is missing is worse than the brute-force risk it covers. The PIN is
+    // still bcrypt-hashed and still only verifiable through service_role.
+    if (error) {
+        console.error('rate_limit_hit failed, allowing request:', error.message);
+        return true;
+    }
+    return data !== false;
 }
 
 /**
- * True once this IP has burned its wrong-PIN budget. Checked *before* the
- * bcrypt comparison, so a locked-out caller costs no CPU.
+ * Overall request budget — catches hammering regardless of PIN validity.
+ * `endpoint` scopes the bucket so one function's traffic cannot exhaust
+ * another's.
  */
-export function pinAttemptsExhausted(ip: string): boolean {
-    const bucket = failures.get(ip);
-    if (!bucket || Date.now() > bucket.resetAt) return false;
-    return bucket.count >= MAX_FAILED_PINS;
+export function allowRequest(
+    supabase: SupabaseClient,
+    endpoint: string,
+    ip: string,
+): Promise<boolean> {
+    return hit(supabase, `${endpoint}:req:${ip}`, MAX_REQUESTS);
 }
 
-export function recordFailedPin(ip: string): void {
-    take(failures, ip, Number.MAX_SAFE_INTEGER);
+/**
+ * Call after a PIN is rejected. Returns false once this IP has burned its
+ * wrong-PIN budget, which is checked on the *next* request — before the
+ * bcrypt comparison, so a locked-out caller costs no CPU.
+ */
+export function recordFailedPin(
+    supabase: SupabaseClient,
+    endpoint: string,
+    ip: string,
+): Promise<boolean> {
+    return hit(supabase, `${endpoint}:pin:${ip}`, MAX_FAILED_PINS);
+}
+
+/**
+ * Peek at the wrong-PIN budget without spending from it, so a legitimate
+ * staff member's successful requests never count toward the brute-force
+ * limit.
+ */
+export async function pinAttemptsExhausted(
+    supabase: SupabaseClient,
+    endpoint: string,
+    ip: string,
+): Promise<boolean> {
+    const { data, error } = await supabase
+        .from('rate_limits')
+        .select('count, reset_at')
+        .eq('bucket', `${endpoint}:pin:${ip}`)
+        .maybeSingle();
+
+    if (error || !data) return false;
+    if (new Date(data.reset_at) <= new Date()) return false;
+    return data.count >= MAX_FAILED_PINS;
 }

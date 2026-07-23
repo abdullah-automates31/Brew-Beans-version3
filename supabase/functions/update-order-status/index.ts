@@ -8,6 +8,10 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
+// Scopes the rate-limit buckets so this function's traffic cannot exhaust
+// staff-list-orders' budget for the same IP.
+const ENDPOINT = 'update-order-status'
+
 interface ReqBody {
   p_pin: string
   p_order_number: string
@@ -23,10 +27,19 @@ serve(async (req) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders })
   }
 
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  )
+
   const ip = clientIp(req)
-  if (!allowRequest(ip) || pinAttemptsExhausted(ip)) {
-    return new Response(JSON.stringify({ error: 'Too many attempts. Try again in a minute.' }), { status: 429, headers: corsHeaders })
-  }
+  const tooMany = new Response(
+    JSON.stringify({ error: 'Too many attempts. Try again in a minute.' }),
+    { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  )
+
+  if (!await allowRequest(supabase, ENDPOINT, ip)) return tooMany
+  if (await pinAttemptsExhausted(supabase, ENDPOINT, ip)) return tooMany
 
   try {
     const body: ReqBody = await req.json()
@@ -35,11 +48,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), { status: 400, headers: corsHeaders })
     }
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
-
     // Not .maybeSingle(): the RPC returns a set, and two staff sharing a
     // PIN would make it throw instead of authenticating.
     const { data: matches, error: pinError } = await supabase
@@ -47,7 +55,7 @@ serve(async (req) => {
 
     if (pinError) throw pinError
     if (!matches || matches.length === 0) {
-      recordFailedPin(ip)
+      await recordFailedPin(supabase, ENDPOINT, ip)
       return new Response(JSON.stringify({ error: 'Invalid PIN' }), { status: 401, headers: corsHeaders })
     }
 
