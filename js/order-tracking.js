@@ -7,11 +7,17 @@ const STEPS = [
 
 const STATUS_LABELS = { placed: 'Placed', preparing: 'Preparing', out_for_delivery: 'Out for Delivery', delivered: 'Delivered', cancelled: 'Cancelled' };
 
+// Mirrors CANCELLABLE_STATUSES in supabase/functions/cancel-order/index.ts —
+// once the kitchen/rider is committed, cancellation is staff-only.
+const CANCELLABLE_STATUSES = ['placed', 'preparing'];
+
 let pollTimer = null;
 let lastStatus = null;
 let notifyEnabled = false;
 let currentOrderNumber = null;
 let currentPhone = null;
+let cancelOrderModal = null;
+let cancelling = false;
 
 function escapeHtml(str) {
     return String(str == null ? '' : str).replace(/[&<>"']/g, ch => ({
@@ -26,6 +32,10 @@ function etaEstimate(createdAt, deliveryCharge) {
     return eta;
 }
 
+function updateCancelButton(status) {
+    $('#cancelOrderWrap').toggle(CANCELLABLE_STATUSES.includes(status));
+}
+
 $('#notifyBtn').on('click', async function () {
     if (!('Notification' in window)) {
         $('#trackError').removeClass('alert-success alert-danger').addClass('alert-warning').text('Browser notifications are not supported here.').show();
@@ -34,6 +44,47 @@ $('#notifyBtn').on('click', async function () {
     const perm = await Notification.requestPermission();
     notifyEnabled = perm === 'granted';
     $(this).html(notifyEnabled ? '<i class="bi bi-bell-fill me-1"></i>Notifying' : '<i class="bi bi-bell me-1"></i>Notify me');
+});
+
+$('#cancelOrderBtn').on('click', function () {
+    if (cancelOrderModal) cancelOrderModal.show();
+});
+
+$('#confirmCancelBtn').on('click', async function () {
+    if (cancelling || !currentOrderNumber || !currentPhone) return;
+    cancelling = true;
+    const $btn = $(this).prop('disabled', true).text('Cancelling...');
+
+    const { data, error } = await supabaseClient.functions.invoke('cancel-order', {
+        body: { p_order_number: currentOrderNumber, p_phone: currentPhone }
+    });
+
+    cancelling = false;
+    $btn.prop('disabled', false).text('Yes, Cancel Order');
+    if (cancelOrderModal) cancelOrderModal.hide();
+
+    if (error || !data) {
+        // A FunctionsHttpError only carries a generic "non-2xx" message —
+        // the real reason (already cancelled / status moved on / rate
+        // limited) is in the response body on error.context. Same pattern
+        // as invokeStaffOrders() in js/staff.js.
+        let message = 'This order could not be cancelled. Please try again or contact us.';
+        if (error && error.context && typeof error.context.json === 'function') {
+            try {
+                message = (await error.context.json()).error || message;
+            } catch (e) { /* non-JSON body — fall back to the generic message */ }
+        }
+        $('#trackError').removeClass('alert-success alert-warning').addClass('alert-danger').text(message).show();
+        return;
+    }
+
+    stopPolling();
+    lastStatus = 'cancelled';
+    updateCancelButton('cancelled');
+    renderSteps('cancelled', true);
+    $('#etaText').text('');
+    $('#trackError').removeClass('alert-warning alert-danger').addClass('alert-success')
+        .text('Your order has been cancelled successfully.').show();
 });
 
 function animateStepsIn() {
@@ -125,6 +176,7 @@ async function trackOrder(orderNumber, phone, silent) {
         }
     }
     lastStatus = order.status;
+    updateCancelButton(order.status);
 
     // Animate on fresh lookup or when status advances — not on every silent background poll.
     renderSteps(order.status, !silent || statusChanged);
@@ -192,6 +244,9 @@ $('#trackForm').on('submit', function (e) {
 
 $(document).ready(function () {
     $('<style>').text('@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}.spin{animation:spin 1s linear infinite;display:inline-block}').appendTo('head');
+
+    const cancelModalEl = document.getElementById('cancelOrderModal');
+    if (cancelModalEl && window.bootstrap) cancelOrderModal = new bootstrap.Modal(cancelModalEl);
 
     if (window.Motion) {
         Motion.animate('.tracking-card', { opacity: [0, 1], y: [24, 0] }, { duration: 0.5, easing: [0.22, 1, 0.36, 1] });
