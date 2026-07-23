@@ -474,6 +474,12 @@ html.bb-no-splash #loading-screen {
 
 .tracking-brand-logo {
     height: 60px;
+    /* The logo artwork is a light cream colour, built for the dark navbar
+       and footer (where it's inverted to white). On the tracking page it
+       sits bare on a cream background and was all but invisible. This
+       recolours it to the brand's dark green so it reads clearly here. */
+    filter: brightness(0) saturate(100%) invert(17%) sepia(34%)
+            saturate(900%) hue-rotate(101deg) brightness(94%) contrast(92%);
 }
 
 .brand-accent {
