@@ -4058,6 +4058,54 @@ textarea:focus-visible {
     color: var(--accent);
 }
 
+/* ── Tracking page on phones ──
+   The page had no mobile rules at all: the card kept its 40px desktop
+   padding (80px gone on a 375px screen) and the four-step row squeezed
+   "Out for Delivery" into a ~74px column at full desktop size. */
+@media (max-width: 575.98px) {
+    .tracking-page { padding: 32px 0; }
+
+    .tracking-card {
+        padding: 24px 18px;
+        border-radius: 14px;
+    }
+
+    /* Let the timestamp and the notify button drop to two lines instead of
+       colliding on a narrow screen. */
+    .tracking-meta-row {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .tracking-steps { margin: 24px 0; }
+    .tracking-step { gap: 6px; }
+
+    /* Smaller icons so four of them plus their labels fit the row. */
+    .tracking-step-icon {
+        width: 32px;
+        height: 32px;
+        border-width: 2px;
+        font-size: 0.85rem;
+    }
+
+    /* Line runs through the centre of the icons — follow them down to 32px. */
+    .tracking-steps::before { top: 15px; }
+
+    /* Two words per line is fine ("Out for" / "Delivery"); this just stops
+       the label forcing the column wider than its quarter. */
+    .tracking-step-label {
+        font-size: 0.68rem;
+        line-height: 1.25;
+    }
+}
+
+/* Very narrow phones — trim the horizontal padding a touch more so the
+   step row keeps its breathing room. */
+@media (max-width: 360px) {
+    .tracking-card { padding: 22px 14px; }
+    .tracking-step-label { font-size: 0.64rem; }
+}
+
 /* ============================================
    STAFF ORDERS PAGE
    ============================================ */
