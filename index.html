@@ -255,10 +255,13 @@
     </nav>
 
     <!-- Cart Sidebar -->
-    <div class="cart-sidebar" id="cartSidebar">
+    <!-- role/aria-label so the drawer reads as its own region, and its
+         heading is understood as belonging to that region rather than
+         sitting loose in the page outline ahead of the <h1>. -->
+    <div class="cart-sidebar" id="cartSidebar" role="dialog" aria-modal="true" aria-labelledby="cartHeading">
         <div class="cart-header">
-            <h4><i class="bi bi-bag me-2"></i>Your Order</h4>
-            <button class="btn-close-cart" id="closeCart"><i class="bi bi-x-lg"></i></button>
+            <h4 id="cartHeading"><i class="bi bi-bag me-2" aria-hidden="true"></i>Your Order</h4>
+            <button class="btn-close-cart" id="closeCart" aria-label="Close cart"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
         </div>
         <div class="cart-body" id="cartBody">
             <div class="empty-cart" id="emptyCart">
@@ -293,6 +296,10 @@
     <div class="cart-overlay" id="cartOverlay"></div>
 
     <!-- Hero Section -->
+    <!-- Screen reader users navigate by landmark to skip the nav on every
+         page load; without <main> there is nothing to skip to. -->
+    <main id="mainContent">
+
     <section class="hero" id="home">
         <div class="hero-frame" id="heroFrame">
 
@@ -428,7 +435,7 @@
                                     <i class="bi bi-cup-hot"></i>
                                 </div>
                                 <div class="feature-info">
-                                    <h5>Artisan Roasting</h5>
+                                    <h3>Artisan Roasting</h3>
                                     <p>Small-batch roasted for peak flavor</p>
                                 </div>
                             </div>
@@ -437,7 +444,7 @@
                                     <i class="bi bi-heart"></i>
                                 </div>
                                 <div class="feature-info">
-                                    <h5>Made with Love</h5>
+                                    <h3>Made with Love</h3>
                                     <p>Every drink crafted with passion</p>
                                 </div>
                             </div>
@@ -466,7 +473,7 @@
                         <div class="category-icon">
                             <i class="bi bi-cup-hot"></i>
                         </div>
-                        <h4>Hot Coffee</h4>
+                        <h3>Hot Coffee</h3>
                         <p>Classic brews & espresso</p>
                         <span class="category-count">12 Items</span>
                     </div>
@@ -476,7 +483,7 @@
                         <div class="category-icon">
                             <i class="bi bi-cup-straw"></i>
                         </div>
-                        <h4>Cold Coffee</h4>
+                        <h3>Cold Coffee</h3>
                         <p>Iced & cold brews</p>
                         <span class="category-count">8 Items</span>
                     </div>
@@ -486,7 +493,7 @@
                         <div class="category-icon">
                             <i class="bi bi-snow"></i>
                         </div>
-                        <h4>Frappes</h4>
+                        <h3>Frappes</h3>
                         <p>Blended icy delights</p>
                         <span class="category-count">6 Items</span>
                     </div>
@@ -496,7 +503,7 @@
                         <div class="category-icon">
                             <i class="bi bi-droplet-half"></i>
                         </div>
-                        <h4>Summer Coolers</h4>
+                        <h3>Summer Coolers</h3>
                         <p>Refreshing cool drinks</p>
                         <span class="category-count">4 Items</span>
                     </div>
@@ -506,7 +513,7 @@
                         <div class="category-icon">
                             <i class="bi bi-cake2"></i>
                         </div>
-                        <h4>Desserts</h4>
+                        <h3>Desserts</h3>
                         <p>Sweet indulgences</p>
                         <span class="category-count">4 Items</span>
                     </div>
@@ -573,7 +580,7 @@
                         <div class="why-icon">
                             <i class="bi bi-tree-fill"></i>
                         </div>
-                        <h4>Fresh Beans</h4>
+                        <h3>Fresh Beans</h3>
                         <p>Ethically sourced and freshly roasted weekly for maximum aroma and flavor.</p>
                     </div>
                 </div>
@@ -582,7 +589,7 @@
                         <div class="why-icon">
                             <i class="bi bi-award"></i>
                         </div>
-                        <h4>Premium Quality</h4>
+                        <h3>Premium Quality</h3>
                         <p>Only the top 1% of Arabica beans make it into our signature blends.</p>
                     </div>
                 </div>
@@ -591,7 +598,7 @@
                         <div class="why-icon">
                             <i class="bi bi-lightning-charge"></i>
                         </div>
-                        <h4>Fast Delivery</h4>
+                        <h3>Fast Delivery</h3>
                         <p>Hot and fresh to your door within 30 minutes. Guaranteed satisfaction.</p>
                     </div>
                 </div>
@@ -600,7 +607,7 @@
                         <div class="why-icon">
                             <i class="bi bi-shield-check"></i>
                         </div>
-                        <h4>Hygienic Prep</h4>
+                        <h3>Hygienic Prep</h3>
                         <p>ISO-certified kitchen with strict hygiene protocols and contactless options.</p>
                     </div>
                 </div>
@@ -609,7 +616,7 @@
                         <div class="why-icon">
                             <i class="bi bi-shop"></i>
                         </div>
-                        <h4>Cozy Environment</h4>
+                        <h3>Cozy Environment</h3>
                         <p>Warm, inviting spaces designed for work, relaxation, and connection.</p>
                     </div>
                 </div>
@@ -700,7 +707,7 @@
                         <div class="reviewer">
                             <div class="reviewer-avatar">S</div>
                             <div class="reviewer-info">
-                                <h5>Shahzeb Aslam</h5>
+                                <h3>Shahzeb Aslam</h3>
                                 <span class="review-source"><i class="bi bi-google"></i> Google Review</span>
                             </div>
                         </div>
@@ -719,7 +726,7 @@
                         <div class="reviewer">
                             <div class="reviewer-avatar">M</div>
                             <div class="reviewer-info">
-                                <h5>Mustafa Mushtaq</h5>
+                                <h3>Mustafa Mushtaq</h3>
                                 <span class="review-source"><i class="bi bi-google"></i> Google Review</span>
                             </div>
                         </div>
@@ -738,7 +745,7 @@
                         <div class="reviewer">
                             <div class="reviewer-avatar">S</div>
                             <div class="reviewer-info">
-                                <h5>Salman Ali</h5>
+                                <h3>Salman Ali</h3>
                                 <span class="review-source"><i class="bi bi-google"></i> Google Review</span>
                             </div>
                         </div>
@@ -769,7 +776,7 @@
                                 <i class="bi bi-geo-alt"></i>
                             </div>
                             <div class="contact-details">
-                                <h5>Address</h5>
+                                <h3>Address</h3>
                                 <p data-shop-text="address">Shop No. 6, Plot SB, Rab Medical Center,<br>Block 2 Gulshan-e-Iqbal,<br>Karachi, Pakistan</p>
                             </div>
                         </div>
@@ -778,7 +785,7 @@
                                 <i class="bi bi-telephone"></i>
                             </div>
                             <div class="contact-details">
-                                <h5>Phone</h5>
+                                <h3>Phone</h3>
                                 <p><a href="tel:+923112463092" data-shop-tel="phone" data-shop-phone-text>+92 311 2463092</a></p>
                             </div>
                         </div>
@@ -787,7 +794,7 @@
                                 <i class="bi bi-envelope"></i>
                             </div>
                             <div class="contact-details">
-                                <h5>Email</h5>
+                                <h3>Email</h3>
                                 <p><a href="mailto:hello@brewbeans.pk" data-shop-mailto="email" data-shop-text="email">hello@brewbeans.pk</a></p>
                             </div>
                         </div>
@@ -796,7 +803,7 @@
                                 <i class="bi bi-clock"></i>
                             </div>
                             <div class="contact-details">
-                                <h5>Opening Hours</h5>
+                                <h3>Opening Hours</h3>
                                 <p>Mon - Sun: 9:00 AM - 4:00 AM</p>
                             </div>
                         </div>
@@ -805,7 +812,7 @@
                                 <i class="bi bi-shop"></i>
                             </div>
                             <div class="contact-details">
-                                <h5>Services</h5>
+                                <h3>Services</h3>
                                 <p>Dine In • Drive Through • No Contact Delivery</p>
                             </div>
                         </div>
@@ -877,6 +884,8 @@
         </div>
     </section>
 
+    </main>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-top">
@@ -897,7 +906,7 @@
                     </div>
                     <div class="col-lg-2 col-md-6">
                         <div class="footer-links">
-                            <h5>Quick Links</h5>
+                            <h3>Quick Links</h3>
                             <ul>
                                 <li><a href="#home">Home</a></li>
                                 <li><a href="#about">About Us</a></li>
@@ -909,7 +918,7 @@
                     </div>
                     <div class="col-lg-2 col-md-6">
                         <div class="footer-links">
-                            <h5>Services</h5>
+                            <h3>Services</h3>
                             <ul>
                                 <li><a href="#contact">Dine In</a></li>
                                 <li><a href="#contact">Drive Through</a></li>
@@ -921,13 +930,17 @@
                     </div>
                     <div class="col-lg-4 col-md-6">
                         <div class="footer-newsletter">
-                            <h5>Newsletter</h5>
+                            <h3>Newsletter</h3>
                             <p>Subscribe for exclusive offers, new menu updates, and coffee tips.</p>
                             <form class="newsletter-form" id="newsletterForm">
+                                <!-- A visually hidden label rather than relying on the
+                                     placeholder: a placeholder disappears the moment
+                                     someone starts typing, and is not an accessible name. -->
+                                <label for="newsletterEmail" class="visually-hidden">Your email address</label>
                                 <div class="input-group">
-                                    <input type="email" class="form-control" placeholder="Your email address" required>
-                                    <button class="btn btn-primary" type="submit">
-                                        <i class="bi bi-send"></i>
+                                    <input type="email" id="newsletterEmail" class="form-control" placeholder="Your email address" required autocomplete="email">
+                                    <button class="btn btn-primary" type="submit" aria-label="Subscribe to newsletter">
+                                        <i class="bi bi-send" aria-hidden="true"></i>
                                     </button>
                                 </div>
                             </form>
@@ -1192,7 +1205,7 @@
 
     <!-- Gallery Lightbox -->
     <div class="lightbox" id="lightbox">
-        <button class="lightbox-close" id="lightboxClose"><i class="bi bi-x-lg"></i></button>
+        <button class="lightbox-close" id="lightboxClose" aria-label="Close image"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
         <img src="" alt="Gallery Image" id="lightboxImg">
     </div>
 
