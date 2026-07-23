@@ -303,11 +303,38 @@
       padding: 1rem 1.75rem;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 0.9rem;
       border-bottom: 1px solid var(--border);
       position: sticky;
       top: 0;
       z-index: 50;
+    }
+
+    /* Section icon beside the title, mirroring the sidebar's icon for the
+       active page. Swaps as you move between sections. */
+    .topbar-icon {
+      flex-shrink: 0;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: #fff;
+      font-size: 1.15rem;
+      box-shadow: 0 4px 10px rgba(15, 61, 46, 0.20);
+    }
+
+    /* A small pop when the icon changes, so the section switch is felt. */
+    .topbar-icon.pop { animation: topbar-icon-pop 0.35s ease; }
+    @keyframes topbar-icon-pop {
+      0%   { transform: scale(0.8) rotate(-8deg); opacity: 0.5; }
+      60%  { transform: scale(1.08) rotate(2deg); }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .topbar-icon.pop { animation: none; }
     }
 
     .topbar-title h1 {
@@ -325,6 +352,9 @@
       display: flex;
       align-items: center;
       gap: 0.75rem;
+      /* Keep the status pill pinned to the far right now that the topbar
+         lays its children out left-to-right with a gap. */
+      margin-left: auto;
     }
 
     .shop-status {
@@ -1548,7 +1578,7 @@
       width: 42px;
       height: 42px;
       flex: 0 0 auto;
-      margin-right: 0.85rem;
+      /* Spacing to the next element comes from the topbar's own `gap`. */
       border: 1.5px solid var(--border);
       border-radius: 12px;
       background: white;
@@ -2332,6 +2362,9 @@
     <button class="menu-toggle" id="menuToggle" aria-label="Open menu" aria-controls="adminSidebar" aria-expanded="false">
       <i class="bi bi-list"></i>
     </button>
+    <div class="topbar-icon" aria-hidden="true">
+      <i class="bi bi-receipt" id="pageIcon"></i>
+    </div>
     <div class="topbar-title">
       <h1 id="pageTitle">Orders</h1>
       <p id="pageSubtitle">Manage incoming orders</p>

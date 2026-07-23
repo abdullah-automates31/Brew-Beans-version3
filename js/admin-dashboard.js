@@ -496,15 +496,17 @@
   }
 
   // ── NAVIGATION ──
+  // [title, subtitle, icon] — the icon mirrors the sidebar icon for that
+  // section so the topbar badge matches the nav.
   const pageTitles = {
-    orders: ['Orders', 'Manage incoming orders'],
-    menu:   ['Menu', 'Manage your menu items'],
-    hours:  ['Business Hours', 'Set your opening hours'],
-    addons:    ['Add-ons', 'Manage addon groups and options'],
-    inventory: ['Inventory', 'Track ingredient stock levels'],
-    staff:     ['Staff PINs', 'Manage staff access'],
-    analytics: ['Analytics', 'Sales overview and insights'],
-    settings:  ['Settings', 'Shop details shown across the website'],
+    orders: ['Orders', 'Manage incoming orders', 'bi-receipt'],
+    menu:   ['Menu', 'Manage your menu items', 'bi-cup-hot'],
+    hours:  ['Business Hours', 'Set your opening hours', 'bi-clock'],
+    addons:    ['Add-ons', 'Manage addon groups and options', 'bi-tags'],
+    inventory: ['Inventory', 'Track ingredient stock levels', 'bi-box-seam'],
+    staff:     ['Staff PINs', 'Manage staff access', 'bi-people'],
+    analytics: ['Analytics', 'Sales overview and insights', 'bi-bar-chart-line'],
+    settings:  ['Settings', 'Shop details shown across the website', 'bi-gear'],
   };
 
   function showPage(page) {
@@ -518,8 +520,18 @@
     pageEl.classList.add('active');
     const titleEl = document.getElementById('pageTitle');
     const subEl   = document.getElementById('pageSubtitle');
+    const iconEl  = document.getElementById('pageIcon');
     if (titleEl) titleEl.textContent = pageTitles[page][0];
     if (subEl)   subEl.textContent   = pageTitles[page][1];
+    if (iconEl) {
+      iconEl.className = 'bi ' + pageTitles[page][2];
+      const badge = iconEl.parentElement;
+      if (badge) {
+        badge.classList.remove('pop');
+        void badge.offsetWidth;   // restart the animation on every switch
+        badge.classList.add('pop');
+      }
+    }
     if (page === 'menu') loadMenu();
     if (page === 'hours') loadHours();
     if (page === 'addons') loadAddonGroups();
